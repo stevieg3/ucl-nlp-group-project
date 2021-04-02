@@ -4,6 +4,15 @@ ucl-nlp-group-project
 Repository for UCL Statistical Natural Language Processing (COMP0087) group coursework. Researching the interaction between adversarial attacks and explainability techniques in the context of NLP.
  
 
+Environment Set-up
+------------
+
+`conda create -n nlp-group-project python=3.7 -y`
+
+`conda activate nlp-group-project`
+
+`pip install -r requirements.txt`
+
 Project Organization
 ------------
 
