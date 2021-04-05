@@ -13,6 +13,12 @@ Environment Set-up
 
 `pip install -r requirements.txt`
 
+
+Datasets
+------------
+- Stanford Sentiment Treebank (https://pypi.org/project/pytreebank/)
+
+
 Project Organization
 ------------
 
