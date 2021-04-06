@@ -10,3 +10,4 @@ transformers==4.4.2
 ipywidgets==7.6.3
 tqdm==4.59.0
 checklist==0.0.10
+allennlp==2.1.0
