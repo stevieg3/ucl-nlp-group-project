@@ -26,6 +26,7 @@ class DatasetSST:
 
     def load_data(self) -> dict:
         if self.data is None:
+            os.mkdir(self.dirname)
             self.data = pytreebank.load_sst(self.dirname)
         return self.data
 
@@ -70,6 +71,7 @@ class DatasetAGNews:
         agnews_url = 'https://www.dropbox.com/s/4l2ghpol5xr75ya/agnews.zip?dl=1'
         filepath = os.path.join(self.dirname, filename)
         if not os.path.isfile(filepath):
+            os.mkdir(self.dirname)
             with open(filepath, "wb") as f:
                 response = requests.get(agnews_url)
                 f.write(response.content)
