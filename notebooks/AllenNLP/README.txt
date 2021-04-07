@@ -8,7 +8,7 @@ A few steps are needed to be able to run the code:
 2) set up the AllenNLP environment:
 my recommendation would be to upload a copy of the folder called 'AllenNLP' to a directory on your Google Drive. The directory consists of the following:
 	- bcn-running_config: this is the notebook that you need to run
-	- config_BCN: the congif file that brings the model and the dataset reader together
+	- config_BCN: the config file that brings the model and the dataset reader together
 	- tagging: this includes the code for the dataset reader
 	- BCN_model: this includes the code for the BCN model from AllenNLP
 
