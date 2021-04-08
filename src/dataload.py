@@ -62,7 +62,6 @@ def load_sst(dirname=os.path.join('data', 'sst')) -> DatasetSST:
 
 class DatasetAGNews:
     NAME = 'agnews'
-    DEV_SIZE = 0.1  # part of the train fold used for dev
 
     def __init__(self, dirname):
         self.dirname = dirname
@@ -70,6 +69,9 @@ class DatasetAGNews:
 
     @property
     def train_dev_test(self):
+        return sel.train_dev_test_devsize()
+
+    def train_dev_test_devsize(self, dev_size=.1):
         data = self.load_data()
         train_dev, test = data['train'], data['test']
         train, dev = sklearn.model_selection.train_test_split(train_dev, test_size=DatasetAGNews.DEV_SIZE)
