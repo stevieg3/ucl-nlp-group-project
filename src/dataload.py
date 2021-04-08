@@ -20,6 +20,10 @@ class Dataset:
     def _filename_of(self, filename: str) -> str:
         return os.path.join(self.dirname, filename)
 
+    def cleanup(self):
+        del self.data
+        self.data = None
+
 
 class DatasetSST(Dataset):
     NAME = 'sst'
