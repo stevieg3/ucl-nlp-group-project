@@ -12,10 +12,14 @@ import requests
 
 import pytreebank
 
+import sklearn
+import sklearn.model_selection
+
 
 class DatasetSST:
+    NAME = 'sst'
+
     def __init__(self, dirname=os.path.join('data', 'sst')):
-        self.name = 'sst'
         self.dirname = dirname
         self.data = None
 
@@ -26,7 +30,8 @@ class DatasetSST:
 
     def load_data(self) -> dict:
         if self.data is None:
-            os.mkdir(self.dirname)
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
             self.data = pytreebank.load_sst(self.dirname)
         return self.data
 
@@ -34,13 +39,13 @@ class DatasetSST:
     def to_dataframe(data: dict) -> pd.DataFrame:
         labels, sentences = [], []
         for labeled_tree_obj in data:
-            lab, sent = labeled_tree_obj.to_labeled_lines()[0]  # First index contains full sentence
+            lab, sent = labeled_tree_obj.to_labeled_lines()[0]
             labels += [lab]
             sentences += [sent]
-        return pd.DataFrame({
-            'sentence': sentences,
-            'label': labels
-        })
+        return pd.DataFrame(dict(
+            sentence=sentences,
+            label=labels
+        ))
 
     def load_dataframe(self) -> dict:
         self.load_data()
@@ -51,27 +56,32 @@ class DatasetSST:
         )
 
 
-def load_sst(dirname: str=os.path.join('data', 'sst')) -> DatasetSST:
+def load_sst(dirname=os.path.join('data', 'sst')) -> DatasetSST:
     return DatasetSST(dirname=dirname)
 
 
 class DatasetAGNews:
+    NAME = 'agnews'
+    DEV_SIZE = 0.1  # part of the train fold used for dev
+
     def __init__(self, dirname):
-        self.name = 'agnews'
         self.dirname = dirname
         self.data = None
 
     @property
-    def train_test(self):
+    def train_dev_test(self):
         data = self.load_data()
-        return data['train'], data['test']
+        train_dev, test = data['train'], data['test']
+        train, dev = sklearn.model_selection.train_test_split(train_dev, test_size=DatasetAGNews.DEV_SIZE)
+        return train, dev, test
 
     def _download_data(self):
         filename = 'agnews.zip'
         agnews_url = 'https://www.dropbox.com/s/4l2ghpol5xr75ya/agnews.zip?dl=1'
         filepath = os.path.join(self.dirname, filename)
         if not os.path.isfile(filepath):
-            os.mkdir(self.dirname)
+            if not os.path.isdir(self.dirname):
+                os.mkdir(self.dirname)
             with open(filepath, "wb") as f:
                 response = requests.get(agnews_url)
                 f.write(response.content)
@@ -98,7 +108,7 @@ class DatasetAGNews:
         return self.data
 
 
-def load_agnews(dirname: str=os.path.join('data', 'agnews')):
+def load_agnews(dirname=os.path.join('data', 'agnews')):
     return DatasetAGNews(dirname=dirname)
 
 
@@ -108,5 +118,5 @@ if __name__ == "__main__":
     train, dev, test = sst.train_dev_test
     bpython.embed(locals_=dict(globals(), **locals()))
     agnews = load_agnews()
-    train, test = agnews.train_test
+    train, dev, test = agnews.train_dev_test
     bpython.embed(locals_=dict(globals(), **locals()))
