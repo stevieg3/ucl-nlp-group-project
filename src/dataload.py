@@ -72,15 +72,18 @@ def load_sst(dirname=os.path.join('data', 'sst')) -> DatasetSST:
 class DatasetAGNews(Dataset):
     NAME = 'agnews'
 
-    def __init__(self, dirname: str, from_jsonl=False) -> None:
+    def __init__(self, dirname: str) -> None:
         self.dirname: str = dirname
-        self.from_jsonl: bool = from_jsonl
-        # data placeholder, RAII
         self.data: dict = None
 
     @property
     def train_dev_test(self):
         return self.train_dev_test_devsize()
+
+    @property
+    def train_dev_test_jsonl(self):
+        files = ['train', 'dev', 'test']
+        return (self._filename_of(f + '.jsonl') for f in files)
 
     def train_dev_test_devsize(self, dev_size=.1):
         data = self.load_data()
@@ -110,34 +113,26 @@ class DatasetAGNews(Dataset):
             zip_ref.extractall(self.dirname)
         return files
 
-    def _save_data_as_jsonl_files(self) -> None:
-        files = ['train', 'test']
+    def _save_data_as_jsonl_files(self, override=False) -> None:
+        files = ['train', 'dev', 'test']
+        train, dev, test = self.train_dev_test
         # if json files don't exist, we need to write them
-        for f in files:
-            readpath = self._filename_of(f + '.csv')
+        for f, df in zip(files, self.train_dev_test):
             writepath = self._filename_of(f + '.jsonl')
-            if os.path.isfile(writepath):
+            if os.path.isfile(writepath) and not override:
                 continue
-            df = pd.read_csv(readpath, sep=',')
             self.save_jsonl(dataframe=df, filepath=writepath)
 
     def load_data(self) -> pd.DataFrame:
         if self.data is None:
             self._download_data()
             self._unzip_data()
-            if self.from_jsonl:
-                # read from jsonl files
-                self._save_data_as_jsonl_files()
-                self.data = dict(
-                    train=pd.read_json(self._filename_of('train.jsonl'), lines=True),
-                    test=pd.read_json(self._filename_of('test.jsonl'), lines=True),
-                )
-            else:
-                # read from csv files
-                self.data = dict(
-                    train=pd.read_csv(self._filename_of('train.csv'), sep=','),
-                    test=pd.read_csv(self._filename_of('test.csv'), sep=',')
-                )
+            # read from csv files
+            self.data = dict(
+                train=pd.read_csv(self._filename_of('train.csv'), sep=','),
+                test=pd.read_csv(self._filename_of('test.csv'), sep=',')
+            )
+            self._save_data_as_jsonl_files()
         return self.data
 
     @staticmethod
@@ -146,8 +141,8 @@ class DatasetAGNews(Dataset):
         dataframe.to_json(filepath, orient='records', lines=True)
 
 
-def load_agnews(dirname=os.path.join('data', 'agnews'), from_jsonl=False):
-    return DatasetAGNews(dirname=dirname, from_jsonl=from_jsonl)
+def load_agnews(dirname=os.path.join('data', 'agnews')):
+    return DatasetAGNews(dirname=dirname)
 
 
 if __name__ == "__main__":
@@ -155,7 +150,7 @@ if __name__ == "__main__":
     sst = load_sst()
     train, dev, test = sst.train_dev_test
     bpython.embed(locals_=dict(globals(), **locals()))
-    agnews = load_agnews(from_jsonl=True)
+    agnews = load_agnews()
     train, dev, test = agnews.train_dev_test
     # save jsonl:
     # DatasetAGNews.save_jsonl(dataframe=train, filepath='train.jsonl')
