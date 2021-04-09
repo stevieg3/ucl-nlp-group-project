@@ -1,157 +1,103 @@
 #!/usr/bin/env python3
 
 
-import sys
 import os
 import zipfile
 
-import tqdm
 import pandas as pd
-import numpy as np
 import requests
 
-import pytreebank
+import datasets
 
 import sklearn
 import sklearn.model_selection
 
 
 class Dataset:
-    def _filename_of(self, filename: str) -> str:
-        return os.path.join(self.dirname, filename)
-
     def cleanup(self):
-        del self.data
+        self.data.clear()
         self.data = None
 
 
 class DatasetSST(Dataset):
     NAME = 'sst'
 
-    def __init__(self, dirname=os.path.join('data', 'sst')):
-        self.dirname = dirname
+    def __init__(self):
         self.data = None
 
     @property
-    def train_dev_test(self) -> tuple:
-        pdframes = self.load_dataframe()
-        return pdframes['train'], pdframes['dev'], pdframes['test']
+    def train_val_test(self) -> tuple:
+        self.load_data()
+        return self.data['train'].data.to_pandas(), \
+                self.data['validation'].data.to_pandas(), \
+                self.data['test'].data.to_pandas()
 
     def load_data(self) -> dict:
         if self.data is None:
-            if not os.path.isdir(self.dirname):
-                os.mkdir(self.dirname)
-            self.data = pytreebank.load_sst(self.dirname)
+            self.data = datasets.load_dataset('sst')
         return self.data
 
-    @staticmethod
-    def to_dataframe(data: dict) -> pd.DataFrame:
-        labels, sentences = [], []
-        for labeled_tree_obj in data:
-            lab, sent = labeled_tree_obj.to_labeled_lines()[0]
-            labels += [lab]
-            sentences += [sent]
-        return pd.DataFrame(dict(
-            sentence=sentences,
-            label=labels
-        ))
 
-    def load_dataframe(self) -> dict:
-        self.load_data()
-        return dict(
-            train=self.to_dataframe(self.data['train']),
-            dev=self.to_dataframe(self.data['dev']),
-            test=self.to_dataframe(self.data['test'])
-        )
-
-
-def load_sst(dirname=os.path.join('data', 'sst')) -> DatasetSST:
-    return DatasetSST(dirname=dirname)
+def load_sst() -> DatasetSST:
+    return DatasetSST()
 
 
 class DatasetAGNews(Dataset):
     NAME = 'agnews'
 
-    def __init__(self, dirname: str) -> None:
-        self.dirname: str = dirname
-        self.data: dict = None
+    def __init__(self) -> None:
+        self.data = None
 
     @property
-    def train_dev_test(self):
-        return self.train_dev_test_devsize()
+    def train_val_test(self):
+        return self.train_val_test_devsize()
 
-    @property
-    def train_dev_test_jsonl(self):
-        files = ['train', 'dev', 'test']
-        return (self._filename_of(f + '.jsonl') for f in files)
-
-    def train_dev_test_devsize(self, dev_size=.1):
+    def train_val_test_devsize(self, dev_size=.1):
         data = self.load_data()
-        train_dev, test = data['train'], data['test']
+        train_dev, test = data['train'].data.to_pandas(), data['test'].data.to_pandas()
         train, dev = sklearn.model_selection.train_test_split(train_dev, test_size=dev_size)
         return train, dev, test
 
-    def _download_data(self) -> str:
-        filename = 'agnews.zip'
-        agnews_url = 'https://www.dropbox.com/s/4l2ghpol5xr75ya/agnews.zip?dl=1'
-        filepath = self._filename_of(filename)
-        if not os.path.isfile(filepath):
-            if not os.path.isdir(self.dirname):
-                os.mkdir(self.dirname)
-            with open(filepath, "wb") as f:
-                response = requests.get(agnews_url)
-                f.write(response.content)
-        return filepath
+    def save_train_val_test_jsonl(self, dirname='.'):
+        self.load_data()
+        self._save_data_as_jsonl_files(dirname=dirname)
+        files = ['train', 'validation', 'test']
+        return [os.path.join(dirname, f + '.jsonl') for f in files]
 
-    def _unzip_data(self):
-        zipfpath = self._download_data()
-        should_return = True
-        files = [self._filename_of(fname) for fname in ['train.csv', 'test.csv']]
-        if all(os.path.isfile(f) for f in files):
-            return files
-        with zipfile.ZipFile(zipfpath, 'r') as zip_ref:
-            zip_ref.extractall(self.dirname)
-        return files
-
-    def _save_data_as_jsonl_files(self, override=False) -> None:
-        files = ['train', 'dev', 'test']
-        train, dev, test = self.train_dev_test
+    def _save_data_as_jsonl_files(self, dirname, override=False) -> None:
+        files = ['train', 'validation', 'test']
+        train, dev, test = self.train_val_test
         # if json files don't exist, we need to write them
-        for f, df in zip(files, self.train_dev_test):
-            writepath = self._filename_of(f + '.jsonl')
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        for f, df in zip(files, self.train_val_test):
+            writepath = os.path.join(dirname, f + '.jsonl')
             if os.path.isfile(writepath) and not override:
                 continue
-            self.save_jsonl(dataframe=df, filepath=writepath)
+            self.save_jsonl(df=df, filepath=writepath)
 
     def load_data(self) -> pd.DataFrame:
         if self.data is None:
-            self._download_data()
-            self._unzip_data()
-            # read from csv files
-            self.data = dict(
-                train=pd.read_csv(self._filename_of('train.csv'), sep=','),
-                test=pd.read_csv(self._filename_of('test.csv'), sep=',')
-            )
-            self._save_data_as_jsonl_files()
+            self.data = datasets.load_dataset(path='ag_news')
         return self.data
 
     @staticmethod
-    def save_jsonl(dataframe: pd.DataFrame, filepath: str) -> None:
-        # assert filepath.endswith('jsonl')
-        dataframe.to_json(filepath, orient='records', lines=True)
+    def save_jsonl(df: pd.DataFrame, filepath: str) -> None:
+        assert filepath.endswith('jsonl')
+        df.to_json(filepath, orient='records', lines=True)
 
 
-def load_agnews(dirname=os.path.join('data', 'agnews')):
-    return DatasetAGNews(dirname=dirname)
+def load_agnews():
+    return DatasetAGNews()
 
 
 if __name__ == "__main__":
     import bpython
     sst = load_sst()
-    train, dev, test = sst.train_dev_test
+    train, val, test = sst.train_val_test
     bpython.embed(locals_=dict(globals(), **locals()))
     agnews = load_agnews()
-    train, dev, test = agnews.train_dev_test
+    train, val, test = agnews.train_val_test
     # save jsonl:
     # DatasetAGNews.save_jsonl(dataframe=train, filepath='train.jsonl')
     # or agnews.save_jsonl
