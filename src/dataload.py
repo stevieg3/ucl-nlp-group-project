@@ -99,6 +99,6 @@ if __name__ == "__main__":
     agnews = load_agnews()
     train, val, test = agnews.train_val_test
     # save jsonl:
-    # DatasetAGNews.save_jsonl(dataframe=train, filepath='train.jsonl')
+    # DatasetAGNews.save_train_val_test_jsonl()
     # or agnews.save_jsonl
     bpython.embed(locals_=dict(globals(), **locals()))
