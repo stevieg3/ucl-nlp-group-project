@@ -3,16 +3,12 @@
 
 import os
 import zipfile
+import typing
 
 import pandas as pd
-import requests
-
 import datasets
-
 import sklearn
 import sklearn.model_selection
-
-import typing
 
 
 class Dataset:
