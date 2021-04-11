@@ -25,14 +25,14 @@ class DatasetSST(Dataset):
 
     @property
     def train_val_test(self) -> typing.Iterable[pd.DataFrame]:
-        self.load_data()
+        self._load_data()
         train, val, test = self.data['train'].data.to_pandas(), \
                             self.data['validation'].data.to_pandas(), \
                             self.data['test'].data.to_pandas()
         self.cleanup()
         return train, val, test
 
-    def load_data(self) -> typing.Dict[str, typing.Any]:
+    def _load_data(self) -> typing.Dict[str, typing.Any]:
         if self.data is None:
             self.data = datasets.load_dataset('sst')
         return self.data
@@ -68,14 +68,14 @@ class DatasetAGNews(Dataset):
         return self.train_val_test_devsize()
 
     def train_val_test_devsize(self, dev_size=.1) -> typing.Iterable[pd.DataFrame]:
-        data = self.load_data()
+        data = self._load_data()
         train_val, test = data['train'].data.to_pandas(), data['test'].data.to_pandas()
         train, val = sklearn.model_selection.train_test_split(train_val, test_size=dev_size)
         self.cleanup()
         return train, val, test
 
     def save_train_val_test_jsonl(self, dirname='.') -> typing.Iterable[str]:
-        self.load_data()
+        self._load_data()
         self._save_data_as_jsonl_files(dirname=dirname)
         files = ['train', 'validation', 'test']
         return [os.path.join(dirname, f + '.jsonl') for f in files]
@@ -92,7 +92,7 @@ class DatasetAGNews(Dataset):
                 continue
             self.save_jsonl(df=df, filepath=writepath)
 
-    def load_data(self) -> pd.DataFrame:
+    def _load_data(self) -> pd.DataFrame:
         if self.data is None:
             self.data = datasets.load_dataset(path='ag_news')
         return self.data
