@@ -78,12 +78,12 @@ class DatasetAGNews(Dataset):
 
     @property
     def train_val_test(self) -> typing.Iterable[pd.DataFrame]:
-        return self.train_val_test_devsize()
+        return self.train_val_test_splitsize()
 
-    def train_val_test_devsize(self, dev_size=.1, random_state=None) -> typing.Iterable[pd.DataFrame]:
+    def train_val_test_splitsize(self, split_size=.1, random_state=None) -> typing.Iterable[pd.DataFrame]:
         data = self._load_data()
         train_val, test = data['train'].data.to_pandas(), data['test'].data.to_pandas()
-        train, val = sklearn.model_selection.train_test_split(train_val, test_size=dev_size,
+        train, val = sklearn.model_selection.train_test_split(train_val, test_size=split_size,
                                                               random_state=random_state)
         self.cleanup()
         return train, val, test
