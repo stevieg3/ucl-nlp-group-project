@@ -81,6 +81,29 @@ class DatasetAGNews(Dataset):
         return self.train_val_test_splitsize()
 
     def train_val_test_splitsize(self, split_size=.1, random_state=None) -> typing.Iterable[pd.DataFrame]:
+        '''
+        Return train, val and test dataframes.
+
+        Sample usage:
+
+        > agnews = load_agnews()
+        > train, val, test = agnews.train_val_test_splitsize(split_size=.1, random_state=None)
+
+        Parameters
+        ----------
+            split_size : float
+                the ratio of validation fold in the original training fold (default 0.1)
+            random_state : typing.Any
+                random state, used by scikit-learn in sklearn.model_selection.train_test_split (default None)
+        Returns
+        -------
+            train : pd.DataFrame
+                training fold
+            val : pd.DataFrame
+                validation fold
+            test : pd.DataFrame
+                test fold
+        '''
         data = self._load_data()
         train_val, test = data['train'].data.to_pandas(), data['test'].data.to_pandas()
         train, val = sklearn.model_selection.train_test_split(train_val, test_size=split_size,
@@ -104,6 +127,12 @@ class DatasetAGNews(Dataset):
                 the directory in which the three files will be saved (default '.')
         Returns
         -------
+            trainfile : str
+                file path where train fold is saved
+            validationfile : str
+                file path where validation fold is saved
+            testfile : str
+                file path where test fold is saved
         '''
         self._load_data()
         self._save_data_as_jsonl_files(dirname=dirname)
