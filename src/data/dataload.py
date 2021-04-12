@@ -7,6 +7,7 @@ import typing
 
 import pandas as pd
 import datasets
+import pytreebank
 import sklearn
 import sklearn.model_selection
 
@@ -26,16 +27,28 @@ class DatasetSST(Dataset):
     @property
     def train_val_test(self) -> typing.Iterable[pd.DataFrame]:
         self._load_data()
-        train, val, test = self.data['train'].data.to_pandas(), \
-                            self.data['validation'].data.to_pandas(), \
-                            self.data['test'].data.to_pandas()
+        train, val, test = self.data['train'], \
+                            self.data['validation'], \
+                            self.data['test']
         self.cleanup()
         return train, val, test
 
     def _load_data(self) -> typing.Dict[str, typing.Any]:
         if self.data is None:
-            self.data = datasets.load_dataset('sst')
+            self.data: dict = pytreebank.load_sst()
+            pdframes: dict = {}
+            for k_from, k_to in dict(train='train', dev='validation', test='test').items():
+                labels, sentences = [], []
+                for labeled_tree_obj in self.data[k_from]:
+                    lab, sent = labeled_tree_obj.to_labeled_lines()[0]
+                    labels += [lab]
+                    sentences += [sent]
+                pdframes[k_to] = pd.DataFrame(dict(sentencee=sentences, label=labels))
+            self.data = pdframes
         return self.data
+
+    def cleanup(self) -> None:
+        self.data = None
 
 
 def load_sst() -> DatasetSST:
