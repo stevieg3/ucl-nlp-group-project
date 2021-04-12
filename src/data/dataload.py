@@ -89,6 +89,22 @@ class DatasetAGNews(Dataset):
         return train, val, test
 
     def save_train_val_test_jsonl(self, dirname='.') -> typing.Iterable[str]:
+        '''
+        Save train, validation and test data into a directory in json-lines format.
+
+        Sample usage:
+
+        > agnews = load_agnews()
+        > train, val, test = agnews.train_val_test  # dataframes
+        > trainfile, valfile, testfile = agnews.save_train_val_test_jsonl(dirname='.')
+
+        Parameters
+        ----------
+            dirname : str
+                the directory in which the three files will be saved (default '.')
+        Returns
+        -------
+        '''
         self._load_data()
         self._save_data_as_jsonl_files(dirname=dirname)
         files = ['train', 'validation', 'test']
