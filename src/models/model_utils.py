@@ -3,7 +3,7 @@
 
 import os
 import sys
-
+import subprocess
 import requests
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ import typing
 from overrides import overrides
 from abc import abstractmethod
 
+import tagging
 import spacy
 import allennlp
 import allennlp.predictors
@@ -21,7 +22,8 @@ import torch.utils.data
 import transformers
 
 # add project root directory to the search path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root_dir)
 from src.data.dataload import *
 import notebooks.AllenNLP.BCN_model as BCN_model
 
@@ -47,18 +49,24 @@ class Model:
         pass
 
     @abstractmethod
-    def _load_pretrained_model(self, filepath: str) -> None:
+    def _load_finetuned_model(self, filepath: str) -> None:
         pass
 
     def _load_model_from_url(self, url: str, filepath: str, override=False) -> None:
         self._download_if_not_exists(url=url, filepath=filepath, override=override)
-        self._load_pretrained_model(filepath)
+        self._load_finetuned_model(filepath)
+
+    @abstractmethod
+    def _finetune_for_dataset(self, dataset, filepath: str) -> None:
+        pass
 
     def _load_model_from_dataset(self, dataset, override=False) -> None:
         filepath = self._get_model_filepath_for_dataset(dataset)
         url = self._get_model_url_for_dataset(dataset)
         if url is None:
-            self._load_pretrained_model(filepath=filepath)
+            if not os.path.exists(filepath) or override:
+                self._finetune_for_dataset(dataset=dataset, filepath=filepath)
+            self._load_finetuned_model(filepath=filepath)
         else:
             self._load_model_from_url(url=url, filepath=filepath, override=override)
 
@@ -107,16 +115,29 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
-    def __init__(self, cache_dir='.'):
+    def __init__(self, cache_dir='.', config_file=None):
         self.nlp = spacy.load('en_core_web_sm')
         self.model = None
         self.vocab = None
         self.cache_dir = cache_dir
+        self.output_dir = ''
+        if config_file is None:
+            self.config_file = os.path.join(project_root_dir, 'notebooks', 'AllenNLP', 'config_BCN.jsonnet')
 
     def _get_model_filepath_for_dataset(self, dataset) -> str:
-        return os.path.join(self.cache_dir, f'{dataset.NAME}-bcn.tar.gz')
+        self.output_dir = os.path.join(self.cache_dir, f'bcn-{dataset.NAME}_output')
+        return os.path.join(self.output_dir, f'{dataset.NAME}-bcn.tar.gz')
 
-    def _load_pretrained_model(self, filepath: str) -> None:
+    def _finetune_for_dataset(self, dataset, filepath: str) -> None:
+        command = ['allennlp', 'train']
+        command += ['--include-package', 'tagging']
+        command += ['-s', self.output_dir]
+        command += [self.config_file]
+        print('executing', command)
+        subprocess.call(command)
+        assert os.path.isdir(self.output_dir)
+
+    def _load_finetuned_model(self, filepath: str) -> None:
         assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
         archive = allennlp.models.archival.load_archive(filepath)
         self.model = archive.model
@@ -154,16 +175,16 @@ class BERTModel(Model):
         filename = f'fine-tuned-bert-{self.bert_type}-{dataset.NAME.lower()}'
         return os.path.join(self.cache_dir, filename)
 
-    def _load_pretrained_model(self, filepath: str) -> None:
+    def _load_finetuned_model(self, filepath: str) -> None:
         assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = transformers.BertForSequenceClassification \
-                                 .from_pretrained(filepath)
+                                 .from_finetuned(filepath)
         self.model.to(self.device)
 
     def _load_tokenizer(self, do_lower_case=True, **kwargs) -> None:
         self.tokenizer = transformers.BertTokenizer \
-                                     .from_pretrained(self.tokenizer_type,
+                                     .from_finetuned(self.tokenizer_type,
                                                       do_lower_case=do_lower_case,
                                                       **kwargs)
 
@@ -171,7 +192,7 @@ class BERTModel(Model):
         self._load_tokenizer(**kwargs)
 
     # TODO
-    def predict(self):
+    def predict(self, s: str):
         pass
 
 
