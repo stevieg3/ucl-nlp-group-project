@@ -13,6 +13,7 @@ from abc import abstractmethod
 
 import spacy
 import allennlp
+import allennlp.predictors
 
 import torch
 import torch.utils
@@ -65,8 +66,8 @@ class Model:
         self._load_model_from_dataset(dataset)
 
 
-@allennlp.predictors.predict.Predictor.register('ag_text_classifier')
-class AGNewsClassifier(allennlp.predictors.predict.Predictor):
+@allennlp.predictors.predictor.Predictor.register('ag_text_classifier')
+class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single class for it.  In particular, it can be used with
