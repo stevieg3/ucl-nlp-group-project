@@ -1,3 +1,10 @@
+# virtualenv
+/pyvenv.cfg
+/bin
+/lib
+/.venv
+
+
 *.zip
 *.bin
 *.env
