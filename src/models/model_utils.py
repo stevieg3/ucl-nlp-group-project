@@ -66,8 +66,8 @@ class Model:
         self._load_model_from_dataset(dataset)
 
 
-@allennlp.predictors.predictor.Predictor.register('ag_text_classifier')
-class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
+@allennlp.predictors.predictor.Predictor.register('allennlp_text_classifier')
+class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single class for it.  In particular, it can be used with
@@ -76,7 +76,7 @@ class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
     """
 
     def predict(self, sentence: str) -> allennlp.common.util.JsonDict:
-        return self.predict_json({"Description": sentence})
+        return self.predict_json({Dataset.SENTENCE: sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: allennlp.common.util.JsonDict) -> allennlp.data.Instance:
@@ -84,7 +84,7 @@ class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
         Expects JSON that looks like `{"sentence": "..."}`.
         Runs the underlying model, and adds the `"label"` to the output.
         """
-        sentence = json_dict["Description"]
+        sentence = json_dict[Dataset.SENTENCE]
         reader_has_tokenizer = (
             getattr(self._dataset_reader, "tokenizer", None) is not None
             or getattr(self._dataset_reader, "_tokenizer", None) is not None
@@ -101,7 +101,7 @@ class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
                 -> typing.List[allennlp.data.Instance]:
         new_instance = instance.duplicate()
         label = np.argmax(outputs["class_probabilities"])
-        new_instance.add_field("label", allennlp.data.fields.LabelField(int(label), skip_indexing=True))
+        new_instance.add_field(Dataset.TARGET, allennlp.data.fields.LabelField(int(label), skip_indexing=True))
         return [new_instance]
 
 
@@ -121,6 +121,10 @@ class BCNModel(Model):
         archive = allennlp.models.archival.load_archive(filepath)
         self.model = archive.model
         self.vocab = self.model.vocab
+        self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
+
+    def predict(self, s: str):
+        return self.predictor.predict(sentence=s)
 
 
 BERT_BASE, BERT_LARGE = 'base', 'large'

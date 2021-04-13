@@ -13,6 +13,9 @@ import sklearn.model_selection
 
 
 class Dataset:
+    TARGET = 'label'
+    SENTENCE = 'sentence'
+
     def cleanup(self) -> None:
         self.data.clear()
         self.data = None
@@ -44,6 +47,8 @@ class DatasetSST(Dataset):
                     labels += [lab]
                     sentences += [sent]
                 pdframes[k_to] = pd.DataFrame(dict(sentencee=sentences, label=labels))
+                pdframes[k_to].rename(columns=dict(sentencee=Dataset.SENTENCE, label=Dataset.TARGET),
+                                      inplace=True)
             self.data = pdframes
         return self.data
 
@@ -106,6 +111,10 @@ class DatasetAGNews(Dataset):
         '''
         data = self._load_data()
         train_val, test = data['train'].data.to_pandas(), data['test'].data.to_pandas()
+        train_val.rename(columns=dict(text=Dataset.SENTENCE, label=Dataset.TARGET),
+                         inplace=True)
+        test.rename(columns=dict(text=Dataset.SENTENCE, label=Dataset.TARGET),
+                    inplace=True)
         train, val = sklearn.model_selection.train_test_split(train_val, test_size=split_size,
                                                               random_state=random_state)
         self.cleanup()
@@ -146,6 +155,8 @@ class DatasetAGNews(Dataset):
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
         for f, df in zip(files, self.train_val_test):
+            df.rename(columns=dict(text=Dataset.SENTENCE,label=Dataset.TARGET),
+                      inplace=True)
             writepath = os.path.join(dirname, f + '.jsonl')
             if os.path.isfile(writepath) and not override:
                 continue
