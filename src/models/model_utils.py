@@ -115,18 +115,20 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
-    def __init__(self, cache_dir='.', config_file=None):
+    def __init__(self, cache_dir='', config_file=None):
         self.nlp = spacy.load('en_core_web_sm')
         self.model = None
         self.vocab = None
+        self.predictor = None
         self.cache_dir = cache_dir
         self.output_dir = ''
         if config_file is None:
-            self.config_file = os.path.join(project_root_dir, 'notebooks', 'AllenNLP', 'config_BCN.jsonnet')
+            config_file = os.path.join(os.path.relpath(project_root_dir), 'notebooks', 'AllenNLP', 'config_BCN.jsonnet')
+        self.config_file = config_file
 
     def _get_model_filepath_for_dataset(self, dataset) -> str:
         self.output_dir = os.path.join(self.cache_dir, f'bcn-{dataset.NAME}_output')
-        return os.path.join(self.output_dir, f'{dataset.NAME}-bcn.tar.gz')
+        return os.path.join(self.output_dir, 'model.tar.gz')
 
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         command = ['allennlp', 'train']
