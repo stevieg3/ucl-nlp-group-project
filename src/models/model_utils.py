@@ -2,6 +2,8 @@
 
 
 import os
+import sys
+
 import requests
 import pandas as pd
 import typing
@@ -10,6 +12,10 @@ import torch
 import torch.utils
 import torch.utils.data
 import transformers
+
+# add project root directory to the search path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from src.data.dataload import *
 
 
 class Model:
@@ -95,9 +101,6 @@ class BERTModel(Model):
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.append(os.path.abspath('../..'))
-    from src.data.dataload import *
     import bpython
     sst = load_sst()
     bert = BERTModel(bert_type=BERT_BASE,
