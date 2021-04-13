@@ -106,7 +106,7 @@ class AGNewsClassifier(allennlp.predictors.predictor.Predictor):
 
 
 
-def BCNModel(Model):
+class BCNModel(Model):
     def __init__(self, cache_dir='.'):
         self.nlp = spacy.load('en_core_web_sm')
         self.model = None
@@ -117,7 +117,8 @@ def BCNModel(Model):
         return os.path.join(self.cache_dir, f'{dataset.NAME}-bcn.tar.gz')
 
     def _load_pretrained_model(self, filepath: str) -> None:
-        archive = allennlp.model.archival.load_archive(filepath)
+        assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
+        archive = allennlp.models.archival.load_archive(filepath)
         self.model = archive.model
         self.vocab = self.model.vocab
 
@@ -150,6 +151,7 @@ class BERTModel(Model):
         return os.path.join(self.cache_dir, filename)
 
     def _load_pretrained_model(self, filepath: str) -> None:
+        assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = transformers.BertForSequenceClassification \
                                  .from_pretrained(filepath)
@@ -171,9 +173,13 @@ class BERTModel(Model):
 
 if __name__ == "__main__":
     import bpython
-    sst = load_sst()
-    bert = BERTModel(bert_type=BERT_BASE,
-                     tokenizer_type=TOKENIZER_UNCASED)
-    bert.load_model(sst)
-    bert.load_tokenizer()
+    agnews = load_agnews()
+    bcn = BCNModel()
+    bcn.load_model(agnews)
     bpython.embed(locals_=dict(globals(), **locals()))
+#    sst = load_sst()
+#    bert = BERTModel(bert_type=BERT_BASE,
+#                     tokenizer_type=TOKENIZER_UNCASED)
+#    bert.load_model(sst)
+#    bert.load_tokenizer()
+#    bpython.embed(locals_=dict(globals(), **locals()))
