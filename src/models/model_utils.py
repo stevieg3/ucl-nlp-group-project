@@ -139,26 +139,38 @@ class BCNModel(Model):
             config_bcn = json.load(f)
         trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.cache_dir)
         print('saved', [trainfile, valfile, testfile])
+        # set up reader
         config_bcn['dataset_reader'] = {
             'type': 'allennlp_reader'
         }
         config_bcn['validation_dataset_reader'] = {
             'type': 'allennlp_reader'
         }
+        # set up train/validation
         config_bcn['train_data_path'] = trainfile
         config_bcn['validation_data_path'] = valfile
+        # set up output layer size
+        data = pd.concat(dataset.train_val_test)
+        n_classes = len(data[Dataset.TARGET].unique())
+        config_bcn['model']['output_layer']['output_dims'][-1] = n_classes
         with open(self.config_file, 'w') as f:
             json.dump(config_bcn, f)
         print('config file', self.config_file)
 
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         self._finetune_setup_config(dataset)
+        PWD = os.path.curdir
+        model_dir = os.path.dirname(__file__)
+        os.chdir(model_dir)
+        print(f'cd "{model_dir}"')
         command = ['allennlp', 'train']
         command += ['--include-package', 'tagging']
         command += ['-s', self.output_dir]
         command += [self.config_file]
         print('executing', command)
         subprocess.call(command)
+        print(f'cd "{PWD}"')
+        os.chdir(PWD)
         assert os.path.isdir(self.output_dir)
 
     def _load_finetuned_model(self, filepath: str) -> None:
@@ -224,9 +236,10 @@ class BERTModel(Model):
 
 if __name__ == "__main__":
     import bpython
-    agnews = load_agnews()
+    # data = load_agnews()
+    data = load_sst()
     bcn = BCNModel()
-    bcn.load_model(agnews)
+    bcn.load_model(data)
     bpython.embed(locals_=dict(globals(), **locals()))
 #    sst = load_sst()
 #    bert = BERTModel(bert_type=BERT_BASE,
