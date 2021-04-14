@@ -4,6 +4,7 @@
 import os
 import sys
 import subprocess
+import json
 import requests
 import numpy as np
 import pandas as pd
@@ -115,22 +116,43 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
-    def __init__(self, cache_dir='', config_file=None):
+    def __init__(self, cache_dir='', config_file_template=None):
         self.nlp = spacy.load('en_core_web_sm')
         self.model = None
         self.vocab = None
         self.predictor = None
         self.cache_dir = cache_dir
         self.output_dir = ''
-        if config_file is None:
-            config_file = os.path.join(os.path.relpath(project_root_dir), 'notebooks', 'AllenNLP', 'config_BCN.jsonnet')
-        self.config_file = config_file
+        if config_file_template is None:
+            config_file_template = 'config_BCN.jsonnet.template'
+        self.config_file_template = config_file_template
+        self.config_file = None
 
     def _get_model_filepath_for_dataset(self, dataset) -> str:
         self.output_dir = os.path.join(self.cache_dir, f'bcn-{dataset.NAME}_output')
+        self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
         return os.path.join(self.output_dir, 'model.tar.gz')
 
+    def _finetune_setup_config(self, dataset):
+        config_bcn = None
+        with open(self.config_file_template, 'r') as f:
+            config_bcn = json.load(f)
+        trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.cache_dir)
+        print('saved', [trainfile, valfile, testfile])
+        config_bcn['dataset_reader'] = {
+            'type': 'allennlp_reader'
+        }
+        config_bcn['validation_dataset_reader'] = {
+            'type': 'allennlp_reader'
+        }
+        config_bcn['train_data_path'] = trainfile
+        config_bcn['validation_data_path'] = valfile
+        with open(self.config_file, 'w') as f:
+            json.dump(config_bcn, f)
+        print('config file', self.config_file)
+
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
+        self._finetune_setup_config(dataset)
         command = ['allennlp', 'train']
         command += ['--include-package', 'tagging']
         command += ['-s', self.output_dir]
@@ -178,6 +200,8 @@ class BERTModel(Model):
         return os.path.join(self.cache_dir, filename)
 
     def _load_finetuned_model(self, filepath: str) -> None:
+        if os.path.isdir(self.output_dir) and not os.path.isfile(filepath):
+            print('[ATTENTION]', f'please remove "{self.output_dir}" and try again')
         assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = transformers.BertForSequenceClassification \
