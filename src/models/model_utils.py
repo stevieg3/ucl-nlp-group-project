@@ -133,22 +133,23 @@ class BCNModel(Model):
         self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
         return os.path.join(self.output_dir, 'model.tar.gz')
 
-    def _finetune_setup_config(self, dataset):
+    def _finetune_setup_config(self, dataset) -> None:
         config_bcn = None
         with open(self.config_file_template, 'r') as f:
             config_bcn = json.load(f)
+        # set up reader
         trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.cache_dir)
         print('saved', [trainfile, valfile, testfile])
-        # set up reader
-        config_bcn['dataset_reader'] = {
-            'type': 'allennlp_reader'
-        }
-        config_bcn['validation_dataset_reader'] = {
-            'type': 'allennlp_reader'
-        }
-        # set up train/validation
-        config_bcn['train_data_path'] = trainfile
-        config_bcn['validation_data_path'] = valfile
+        config_bcn.update(dict(
+            dataset_reader={
+                'type': 'allennlp_reader'
+            },
+            validation_dataset_reader={
+                'type': 'allennlp_reader'
+            },
+            train_data_path=trainfile,
+            validation_data_path=valfile
+        ))
         # set up output layer size
         data = pd.concat(dataset.train_val_test)
         n_classes = len(data[Dataset.TARGET].unique())
@@ -180,8 +181,16 @@ class BCNModel(Model):
         self.vocab = self.model.vocab
         self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
 
-    def predict(self, s: str):
-        return self.predictor.predict(sentence=s)
+    def predict(self, s: str) -> pd.DataFrame:
+        return pd.DataFrame(self.predictor.predict(sentence=s))
+
+    def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
+        preds = self.predictor.predict_batch_json([
+            {
+                Dataset.SENTENCE: ss
+            } for ss in s
+        ])
+        return pd.DataFrame(preds)
 
 
 BERT_BASE, BERT_LARGE = 'base', 'large'
