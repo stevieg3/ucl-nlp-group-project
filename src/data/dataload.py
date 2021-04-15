@@ -29,7 +29,7 @@ class Dataset:
         pass
 
     def _preprocess(self, df):
-        pass
+        return df
 
     def save_train_val_test_jsonl(self, dirname='.', prefix=None) -> typing.Iterable[str]:
         '''
