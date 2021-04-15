@@ -69,6 +69,13 @@ def checklist_contract_sentence(df, sentence_col_name):
 
 
 def checklist_change_names(df, sentence_col_name):
+    """
+    Change name in sentence if one exists and if name is in CheckList's name lookup json
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :return: None. Modifies DataFrame in-place
+    """
     # Checklist requires pre-processing with Spacy for these perturbations
     pdata = list(nlp.pipe(df[sentence_col_name]))
 
