@@ -200,7 +200,9 @@ class DatasetAGNews(Dataset):
 
     def _load_data(self) -> pd.DataFrame:
         if self.data is None:
-            self.data = datasets.load_dataset('ag_news_datasets')
+            datadir = os.path.dirname(__file__)
+            relpath = os.path.join(os.path.relpath(datadir, os.path.curdir), 'ag_news_datasets')
+            self.data = datasets.load_dataset(relpath)
         return self.data
 
 

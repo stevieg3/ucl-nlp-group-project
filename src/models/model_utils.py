@@ -117,7 +117,6 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 class BCNModel(Model):
     def __init__(self, cache_dir='', config_file_template=None):
-        self.nlp = spacy.load('en_core_web_sm')
         self.model = None
         self.vocab = None
         self.predictor = None
@@ -245,8 +244,8 @@ class BERTModel(Model):
 
 if __name__ == "__main__":
     import bpython
-    # data = load_agnews()
-    data = load_sst()
+    data = load_agnews()
+    # data = load_sst()
     bcn = BCNModel()
     bcn.load_model(data)
     bpython.embed(locals_=dict(globals(), **locals()))
