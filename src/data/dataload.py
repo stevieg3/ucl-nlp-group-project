@@ -43,7 +43,7 @@ class DatasetSST(Dataset):
                     lab, sent = labeled_tree_obj.to_labeled_lines()[0]
                     labels += [lab]
                     sentences += [sent]
-                pdframes[k_to] = pd.DataFrame(dict(sentencee=sentences, label=labels))
+                pdframes[k_to] = pd.DataFrame(dict(sentence=sentences, label=labels))
             self.data = pdframes
         return self.data
 
