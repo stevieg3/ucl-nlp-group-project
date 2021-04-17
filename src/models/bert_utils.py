@@ -23,6 +23,11 @@ SST_MAX_LENGTH = 70
 Max length of input sequence for SST dataset
 """
 
+SST_NUM_LABELS = 5
+"""
+Number of labels in SST
+"""
+
 SST_BERT_HYPERPARAMETERS = {
     'batch_size': 32,
     'learning_rate': 2e-5,
@@ -35,6 +40,11 @@ Selected hyperparameters for fine-tuning BERT on SST dataset
 AGN_MAX_LENGTH = 380
 """
 Max length of input sequence for AGNews dataset
+"""
+
+AGN_NUM_LABELS = 4
+"""
+Number of labels in AGNews
 """
 
 AGN_BERT_HYPERPARAMETERS = {
