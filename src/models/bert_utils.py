@@ -18,16 +18,33 @@ from transformers.trainer_utils import \
 from tqdm import tqdm
 
 
-MAX_LENGTH = 70
+SST_MAX_LENGTH = 70
 """
-Max length of input sequence
+Max length of input sequence for SST dataset
 """
 
-BERT_HYPERPARAMETERS = {
+SST_BERT_HYPERPARAMETERS = {
     'batch_size': 32,
     'learning_rate': 2e-5,
     'number_of_epochs': 2
 }
+"""
+Selected hyperparameters for fine-tuning BERT on SST dataset
+"""
+
+AGN_MAX_LENGTH = 380
+"""
+Max length of input sequence for AGNews dataset
+"""
+
+AGN_BERT_HYPERPARAMETERS = {
+    'batch_size': 16,
+    'learning_rate': 2e-5,
+    'number_of_epochs': 2
+}
+"""
+Selected hyperparameters for fine-tuning BERT on AGNews dataset
+"""
 
 RANDOM_SEED = 3
 """
@@ -66,18 +83,22 @@ def create_sentence_input_arrays(list_encoded_sentences, max_length):
     return train_array, train_attention_mask_array
 
 
-def fine_tune_bert(device, train_data_loader, dev_data_loader):
+def fine_tune_bert(device, train_data_loader, dev_data_loader, num_labels, hyperparameter_dict):
     """
     Fine tune BERT-base-uncased
 
     :param device: Torch device
     :param train_data_loader: DataLoader object for training data
     :param dev_data_loader: DataLoader object for development data
+    :param num_labels: Number of target labels
+    :param hyperparameter_dict: Dictionary of model hyperparameters
     :return: Fine-tuned BERT model
     """
+    set_seed(RANDOM_SEED)
+
     bert_model = BertForSequenceClassification.from_pretrained(
         "bert-base-uncased",
-        num_labels=5,
+        num_labels=num_labels,
         output_attentions=False,
         output_hidden_states=False
     )
@@ -86,12 +107,10 @@ def fine_tune_bert(device, train_data_loader, dev_data_loader):
 
     optimizer = AdamW(
         bert_model.parameters(),
-        lr=BERT_HYPERPARAMETERS['learning_rate']
+        lr=hyperparameter_dict['learning_rate']
     )
 
-    set_seed(RANDOM_SEED)
-
-    for epoch in range(BERT_HYPERPARAMETERS['number_of_epochs']):
+    for epoch in range(hyperparameter_dict['number_of_epochs']):
 
         # Training
 
@@ -192,7 +211,7 @@ def fine_tune_bert(device, train_data_loader, dev_data_loader):
     return bert_model
 
 
-def make_predictions(df, model, tokenizer, sentence_col_name, device):
+def make_predictions(df, model, tokenizer, sentence_col_name, device, max_length, hyperparameter_dict):
     """
     Make predictions on DataFrame containing sentences with given model
 
@@ -201,6 +220,8 @@ def make_predictions(df, model, tokenizer, sentence_col_name, device):
     :param tokenizer: BERT-base tokenizer
     :param sentence_col_name: Name of column containing input sentences
     :param device: Torch device
+    :param max_length: Max length of input sequence (for padding)
+    :param hyperparameter_dict: Dictionary of model hyperparameters
     :return: NumPy array of label predictions
     """
     # Prepare data
@@ -215,7 +236,7 @@ def make_predictions(df, model, tokenizer, sentence_col_name, device):
 
     input_array, input_attention_mask_array = create_sentence_input_arrays(
         encoded_sentences,
-        MAX_LENGTH
+        max_length
     )
 
     input_tensor = torch.tensor(input_array)
@@ -223,7 +244,7 @@ def make_predictions(df, model, tokenizer, sentence_col_name, device):
 
     input_dataset = TensorDataset(input_tensor, input_attention_mask_tensor)
 
-    input_data_loader = DataLoader(input_dataset, batch_size=32)
+    input_data_loader = DataLoader(input_dataset, batch_size=hyperparameter_dict['batch_size'])
 
     # Run model
 
