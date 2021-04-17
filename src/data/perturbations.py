@@ -3,15 +3,36 @@ import spacy
 from checklist.perturb import Perturb
 
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
+from copy import deepcopy
 
 nlp = spacy.load('en_core_web_sm')
 
 ## reference objects to be used in perturbations
 
-punctuation = ['!', '"', '&', "'", '(', ')', ',', '-', '.', '/', ':', ';', '?', '[', ']', '_', '`', '{', '}', '—',
+PUNCTUATION = ['!', '"', '&', "'", '(', ')', ',', '-', '.', '/', ':', ';', '?', '[', ']', '_', '`', '{', '}', '—',
  '…', '®', '–', '™', '‐']
+"""list of characters to be removed in punctuation-related perturbations"""
 
-def remove_char(text_orig, char):
+DICT_GENDER = {
+    'he': 'she', 
+    'him':'her', 
+    'his': 'her', 
+    'she':'he', 
+    'her': 'his', 
+    'hers': 'his'}
+pairs = [
+    ['man','woman'],
+    ['men','women'],
+    ['boy','girl'],
+    ['boyfriend','girlfriend'],
+    ['wife', 'husband'], 
+    ['brother','sister']]
+for pair in pairs:
+    DICT_GENDER[pair[0]] = pair[1]
+    DICT_GENDER[pair[1]] = pair[0]
+"""list of gendered words and pronouns to be replaced in related perturbations"""
+
+def custom_remove_char(text_orig, char):
     """Removes characters from a list of string
     Inputs: 
     text: String or list that has strings as elements. Transformation will be applied to all strings.
@@ -36,11 +57,7 @@ def remove_char(text_orig, char):
         result = result[0]
     return result 
 
-dict_gender = {'he': 'she', 'him':'her', 'his': 'her', 'she':'he', 'her': 'his', 'hers': 'his'}
-pairs = [['man','woman'],['men','women'],['boy','girl'],['boyfriend','girlfriend'],['wife', 'husband'], ['brother','sister']]
-for pair in pairs:
-    dict_gender[pair[0]] = pair[1]
-    dict_gender[pair[1]] = pair[0]
+
 
 ## perturbations
 
@@ -151,7 +168,7 @@ def checklist_change_names(df, sentence_col_name):
         df[sentence_col_name + '_change_names']
     )
 
-def remove_comma(df, sentence_col_name, tokenizer = SpacyTokenizer()):
+def custom_remove_comma(df, sentence_col_name, tokens_orig):
     """
     Remove all commas from sentence
 
@@ -160,10 +177,8 @@ def remove_comma(df, sentence_col_name, tokenizer = SpacyTokenizer()):
     :param tokenizer to be applied to the sentence
     :return: None. Modifies DataFrame in-place
     """
-    tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] 
-    for i in range(len(df))]
 
-    tokens_pert = [remove_char(sentence, ',') for sentence in tokens_orig]
+    tokens_pert = [custom_remove_char(sentence, ',') for sentence in tokens_orig]
 
     empty_indices = []
     for i in range(len(tokens_pert)):
@@ -191,7 +206,7 @@ def remove_comma(df, sentence_col_name, tokenizer = SpacyTokenizer()):
     df[sentence_col_name + '_remove_commas'] = new_column_sentence
     df['success_remove_commas'] = new_column_success
 
-def remove_all_punctuation(df, sentence_col_name, tokenizer = SpacyTokenizer()):
+def custom_remove_all_punctuation(df, sentence_col_name, tokens_orig):
     """
     Remove all punctuation from sentence
 
@@ -200,10 +215,8 @@ def remove_all_punctuation(df, sentence_col_name, tokenizer = SpacyTokenizer()):
     :param tokenizer to be applied to the sentence
     :return: None. Modifies DataFrame in-place
     """
-    tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] 
-    for i in range(len(df))]
 
-    tokens_pert = [remove_char(sentence, punctuation) for sentence in tokens_orig]
+    tokens_pert = [custom_remove_char(sentence, PUNCTUATION) for sentence in tokens_orig]
 
     empty_indices = []
     for i in range(len(tokens_pert)):
@@ -232,7 +245,7 @@ def remove_all_punctuation(df, sentence_col_name, tokenizer = SpacyTokenizer()):
     df['success_remove_all_punct'] = new_column_success
 
 
-def switch_gender(df, sentence_col_name, dict_gender = dict_gender, tokenizer = SpacyTokenizer()):
+def custom_switch_gender(df, sentence_col_name, tokens_orig, dict_gender = DICT_GENDER):
     """
     Change gendered words
 
@@ -242,7 +255,7 @@ def switch_gender(df, sentence_col_name, dict_gender = dict_gender, tokenizer = 
     :param tokenizer to be applied to the sentence
     :return: None. Modifies DataFrame in-place
     """
-    tokens = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] for i in range(len(df))]
+    tokens = deepcopy(tokens_orig)
 
     new_column_sentence = [None for i in range(len(df))]
     new_column_success = [None for i in range(len(df))]
@@ -263,10 +276,12 @@ def switch_gender(df, sentence_col_name, dict_gender = dict_gender, tokenizer = 
 
     df[sentence_col_name + '_switch_gender'] = new_column_sentence
     df['success_switch_gender'] = new_column_success
-            
 
-def add_checklist_perturbations(
-        df, sentence_col_name, perturbation_functions, seed=3
+perturbations_with_tokenization = [custom_remove_comma, custom_remove_all_punctuation, custom_switch_gender]
+"""list of perturbations that require tokenisation"""
+
+def add_perturbations(
+        df, sentence_col_name, perturbation_functions, seed=3, tokenizer = None
 ):
     """
     Apply multiple perturbations, generating a new column for each perturbation
@@ -279,9 +294,18 @@ def add_checklist_perturbations(
     """
     df = df.copy()
 
+    tokenizer = tokenizer or SpacyTokenizer()
+
+    # verify if any of the perturbation functions require tokenization
+    if len(set(perturbation_functions + perturbations_with_tokenization)) != len(perturbation_functions) + len(perturbations_with_tokenization):
+        tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] for i in range(len(df))]
+
     np.random.seed(seed)  # Set seed as some perturbations are stochastic
 
     for perturbation in perturbation_functions:
-        perturbation(df, sentence_col_name)
+        if perturbation in perturbations_with_tokenization:
+            perturbation(df, sentence_col_name, tokens_orig)
+        else:
+            perturbation(df, sentence_col_name)
 
     return df
