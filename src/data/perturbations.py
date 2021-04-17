@@ -2,8 +2,47 @@ import numpy as np
 import spacy
 from checklist.perturb import Perturb
 
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
+
 nlp = spacy.load('en_core_web_sm')
 
+## reference objects to be used in perturbations
+
+punctuation = ['!', '"', '&', "'", '(', ')', ',', '-', '.', '/', ':', ';', '?', '[', ']', '_', '`', '{', '}', '—',
+ '…', '®', '–', '™', '‐']
+
+def remove_char(text_orig, char):
+    """Removes characters from a list of string
+    Inputs: 
+    text: String or list that has strings as elements. Transformation will be applied to all strings.
+    char: character(s) to be removed. This can be a string, or a list of strings (if multiple characters 
+    need to be removed)
+    
+    Output: modified string, or list of modified strings
+    """
+    if type(text_orig) == str:
+        text = [text_orig]
+    else:
+        text = text_orig
+    if type(char) == str:
+        char = [char]
+    result = []
+    dummy_string = ''
+    dummy_dict = dict.fromkeys(char,'')
+    table = dummy_string.maketrans(dummy_dict)
+    for i in range(len(text)):
+        result.append(text[i].translate(table))
+    if type(text_orig) == str:
+        result = result[0]
+    return result 
+
+dict_gender = {'he': 'she', 'him':'her', 'his': 'her', 'she':'he', 'her': 'his', 'hers': 'his'}
+pairs = [['man','woman'],['men','women'],['boy','girl'],['boyfriend','girlfriend'],['wife', 'husband'], ['brother','sister']]
+for pair in pairs:
+    dict_gender[pair[0]] = pair[1]
+    dict_gender[pair[1]] = pair[0]
+
+## perturbations
 
 def checklist_strip_punctuation(df, sentence_col_name):
     """
@@ -112,6 +151,119 @@ def checklist_change_names(df, sentence_col_name):
         df[sentence_col_name + '_change_names']
     )
 
+def remove_comma(df, sentence_col_name, tokenizer = SpacyTokenizer()):
+    """
+    Remove all commas from sentence
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokenizer to be applied to the sentence
+    :return: None. Modifies DataFrame in-place
+    """
+    tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] 
+    for i in range(len(df))]
+
+    tokens_pert = [remove_char(sentence, ',') for sentence in tokens_orig]
+
+    empty_indices = []
+    for i in range(len(tokens_pert)):
+        if tokens_pert[i] == tokens_orig[i]:
+            empty_indices.append(None)
+        else:
+            empty_indices_sentence = []
+            for t in range(len(tokens_pert[i])):
+                if tokens_pert[i][t] == '':
+                    empty_indices_sentence.append(t)
+            empty_indices.append(empty_indices_sentence)
+
+    new_column_sentence = []
+    new_column_success = []
+
+    for i in range(len(tokens_pert)):
+        if empty_indices[i] == None:
+            new_column_sentence.append(df[sentence_col_name][i])
+            new_column_success.append(0)
+        
+        else:
+            new_column_sentence.append(" ".join(tokens_pert[i]))
+            new_column_success.append(f'1, tokens removed: {empty_indices[i]}')
+    
+    df[sentence_col_name + '_remove_commas'] = new_column_sentence
+    df['success_remove_commas'] = new_column_success
+
+def remove_all_punctuation(df, sentence_col_name, tokenizer = SpacyTokenizer()):
+    """
+    Remove all punctuation from sentence
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokenizer to be applied to the sentence
+    :return: None. Modifies DataFrame in-place
+    """
+    tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] 
+    for i in range(len(df))]
+
+    tokens_pert = [remove_char(sentence, punctuation) for sentence in tokens_orig]
+
+    empty_indices = []
+    for i in range(len(tokens_pert)):
+        if tokens_pert[i] == tokens_orig[i]:
+            empty_indices.append(None)
+        else:
+            empty_indices_sentence = []
+            for t in range(len(tokens_pert[i])):
+                if tokens_pert[i][t] == '':
+                    empty_indices_sentence.append(t)
+            empty_indices.append(empty_indices_sentence)
+
+    new_column_sentence = []
+    new_column_success = []
+
+    for i in range(len(tokens_pert)):
+        if empty_indices[i] == None:
+            new_column_sentence.append(df[sentence_col_name][i])
+            new_column_success.append(0)
+        
+        else:
+            new_column_sentence.append(" ".join(tokens_pert[i]))
+            new_column_success.append(f'1, tokens removed: {empty_indices[i]}')
+    
+    df[sentence_col_name + '_remove_all_punct'] = new_column_sentence
+    df['success_remove_all_punct'] = new_column_success
+
+
+def switch_gender(df, sentence_col_name, dict_gender = dict_gender, tokenizer = SpacyTokenizer()):
+    """
+    Change gendered words
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param dict_gender: look-up dict of words to change
+    :param tokenizer to be applied to the sentence
+    :return: None. Modifies DataFrame in-place
+    """
+    tokens = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] for i in range(len(df))]
+
+    new_column_sentence = [None for i in range(len(df))]
+    new_column_success = [None for i in range(len(df))]
+
+    for s in range(len(tokens)):
+        sentence = tokens[s]
+        changes = 0
+        for i in range(len(sentence)):
+            if sentence[i] in dict_gender:
+                sentence[i] = dict_gender[sentence[i]]
+                changes += 1
+        if changes > 0:
+            new_column_sentence[s] = " ".join(tokens[s])
+            new_column_success[s] = 1
+        else:
+            new_column_sentence[s] = df[sentence_col_name][s]
+            new_column_success[s] = 0
+
+    df[sentence_col_name + '_switch_gender'] = new_column_sentence
+    df['success_switch_gender'] = new_column_success
+            
 
 def add_checklist_perturbations(
         df, sentence_col_name, perturbation_functions, seed=3
