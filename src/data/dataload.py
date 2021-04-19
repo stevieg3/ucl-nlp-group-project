@@ -103,7 +103,7 @@ class DatasetSST(Dataset):
         return train, val, test
 
     def _preprocess(self, df: pd.DataFrame) -> pd.DataFrame:
-        df.rename(columns=dict(sentencee=Dataset.SENTENCE, label=Dataset.TARGET),
+        df.rename(columns=dict(sentence=Dataset.SENTENCE, label=Dataset.TARGET),
                   inplace=True)
         return df
 
@@ -117,7 +117,7 @@ class DatasetSST(Dataset):
                     lab, sent = labeled_tree_obj.to_labeled_lines()[0]
                     labels += [lab]
                     sentences += [sent]
-                pdframes[k_to] = pd.DataFrame(dict(sentencee=sentences, label=labels))
+                pdframes[k_to] = pd.DataFrame(dict(sentence=sentences, label=labels))
                 pdframes[k_to] = self._preprocess(pdframes[k_to])
             self.data = pdframes
         return self.data
