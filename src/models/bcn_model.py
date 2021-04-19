@@ -32,6 +32,12 @@ import notebooks.AllenNLP.BCN_model as BCN_model
 class Model:
     def __init__(self):
         self.model = None
+        self.modeldir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
+
+    def _relpath_to(self, filename=''):
+        if filename == '':
+            return self.modeldir
+        return os.path.join(self.modeldir, filename)
 
     def _download_if_not_exists(self, url: str, filepath: str, override=False) -> str:
         if os.path.isfile(filepath) and not override:
@@ -71,7 +77,17 @@ class Model:
         else:
             self._load_model_from_url(url=url, filepath=filepath, override=override)
 
-    def load_model(self, dataset) -> None:
+    def load_model(self, dataset: Dataset) -> None:
+        '''
+        Load a fune-tuned model for a dataset.
+
+        Parameters
+        ----------
+            dataset : Dataset
+                dataset for fine-tuning
+        Returns
+        -------
+        '''
         self._load_model_from_dataset(dataset)
 
 
@@ -116,15 +132,14 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
-    def __init__(self, cache_dir='', config_file_template=None):
+    def __init__(self):
+        super(BCNModel, self).__init__()
         self.model = None
         self.vocab = None
         self.predictor = None
-        self.cache_dir = cache_dir
-        self.output_dir = ''
-        if config_file_template is None:
-            config_file_template = 'config_BCN.jsonnet.template'
-        self.config_file_template = config_file_template
+        self.cache_dir = self._relpath_to('')
+        self.output_dir = self._relpath_to('')
+        self.config_file_template = self._relpath_to('config_BCN.jsonnet.template')
         self.config_file = None
 
     def _get_model_filepath_for_dataset(self, dataset) -> str:
@@ -160,9 +175,8 @@ class BCNModel(Model):
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         self._finetune_setup_config(dataset)
         PWD = os.path.curdir
-        model_dir = os.path.dirname(__file__)
-        os.chdir(model_dir)
-        print(f'cd "{model_dir}"')
+        os.chdir(self.modeldir)
+        print(f'cd "{self.modeldir}"')
         command = ['allennlp', 'train']
         command += ['--include-package', 'tagging']
         command += ['-s', self.output_dir]
@@ -181,9 +195,33 @@ class BCNModel(Model):
         self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
 
     def predict(self, s: str) -> pd.DataFrame:
+        '''
+        Predicts classification label for a given input instance
+
+        Parameters
+        ----------
+            s : str
+                sentence/text instance to predict for
+        Returns
+        -------
+            prediction_report : pd.DataFrame
+                allennlp's per-class prediction report
+        '''
         return pd.DataFrame(self.predictor.predict(sentence=s))
 
     def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
+        '''
+        Predicts classification label for a given input instance
+
+        Parameters
+        ----------
+            s : [str]
+                sentence/text instances to predict for (iterable)
+        Returns
+        -------
+            prediction_report : pd.DataFrame
+                allennlp's per-class prediction report, with fields concattenated for multiple instances
+        '''
         preds = self.predictor.predict_batch_json([
             {
                 Dataset.SENTENCE: ss
@@ -192,66 +230,11 @@ class BCNModel(Model):
         return pd.DataFrame(preds)
 
 
-BERT_BASE, BERT_LARGE = 'base', 'large'
-TOKENIZER_UNCASED = 'uncased'
-class BERTModel(Model):
-    def __init__(self, cache_dir='.', bert_type=BERT_BASE, tokenizer_type=TOKENIZER_UNCASED) -> None:
-        assert bert_type in [BERT_BASE, BERT_LARGE]
-        self.bert_type = bert_type
-        self.tokenizer_type = f'bert-{bert_type}-{tokenizer_type}'
-        self.device = None
-        self.model = None
-        self.tokenizer = None
-        self.cache_dir = cache_dir
-
-    def _get_model_url_for_dataset(self, dataset) -> typing.Optional[str]:
-        registry: dict = {
-            BERT_BASE: dict(
-            ),
-            BERT_LARGE: dict(
-            )
-        }
-        if dataset.NAME not in registry:
-            return None
-        return registry[dataset.NAME]
-
-    def _get_model_filepath_for_dataset(self, dataset) -> str:
-        filename = f'fine-tuned-bert-{self.bert_type}-{dataset.NAME.lower()}'
-        return os.path.join(self.cache_dir, filename)
-
-    def _load_finetuned_model(self, filepath: str) -> None:
-        if os.path.isdir(self.output_dir) and not os.path.isfile(filepath):
-            print('[ATTENTION]', f'please remove "{self.output_dir}" and try again')
-        assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = transformers.BertForSequenceClassification \
-                                 .from_finetuned(filepath)
-        self.model.to(self.device)
-
-    def _load_tokenizer(self, do_lower_case=True, **kwargs) -> None:
-        self.tokenizer = transformers.BertTokenizer \
-                                     .from_finetuned(self.tokenizer_type,
-                                                      do_lower_case=do_lower_case,
-                                                      **kwargs)
-
-    def load_tokenizer(self, **kwargs) -> None:
-        self._load_tokenizer(**kwargs)
-
-    # TODO
-    def predict(self, s: str):
-        pass
-
-
 if __name__ == "__main__":
     import bpython
     data = load_agnews()
     # data = load_sst()
     bcn = BCNModel()
+    bpython.embed(locals_=dict(globals(), **locals()))
     bcn.load_model(data)
     bpython.embed(locals_=dict(globals(), **locals()))
-#    sst = load_sst()
-#    bert = BERTModel(bert_type=BERT_BASE,
-#                     tokenizer_type=TOKENIZER_UNCASED)
-#    bert.load_model(sst)
-#    bert.load_tokenizer()
-#    bpython.embed(locals_=dict(globals(), **locals()))
