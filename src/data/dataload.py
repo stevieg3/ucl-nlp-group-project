@@ -19,6 +19,9 @@ class Dataset:
     TARGET = 'label'
     SENTENCE = 'sentence'
 
+    def __init__(self):
+        self.datadir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
+
     @property
     @abstractmethod
     def train_val_test(self):
@@ -82,7 +85,7 @@ class Dataset:
         assert filepath.endswith('jsonl')
         df.to_json(filepath, orient='records', lines=True)
 
-    def cleanup(self) -> None:
+    def cleanup(self):
         self.data.clear()
         self.data = None
 
@@ -90,7 +93,8 @@ class Dataset:
 class DatasetSST(Dataset):
     NAME = 'sst'
 
-    def __init__(self) -> None:
+    def __init__(self):
+        super(DatasetSST, self).__init__()
         self.data = None
 
     @property
@@ -122,7 +126,7 @@ class DatasetSST(Dataset):
             self.data = pdframes
         return self.data
 
-    def cleanup(self) -> None:
+    def cleanup(self):
         self.data = None
 
 
@@ -148,7 +152,8 @@ def load_sst() -> DatasetSST:
 class DatasetAGNews(Dataset):
     NAME = 'agnews'
 
-    def __init__(self) -> None:
+    def __init__(self):
+        super(DatasetAGNews, self).__init__()
         self.data = None
 
     @property
@@ -200,8 +205,7 @@ class DatasetAGNews(Dataset):
 
     def _load_data(self) -> pd.DataFrame:
         if self.data is None:
-            datadir = os.path.dirname(__file__)
-            relpath = os.path.join(os.path.relpath(datadir, os.path.curdir), 'ag_news_datasets')
+            relpath = os.path.join(self.datadir, 'ag_news_datasets')
             self.data = datasets.load_dataset(relpath)
         return self.data
 
