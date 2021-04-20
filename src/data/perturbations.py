@@ -1,11 +1,15 @@
 import numpy as np
+import pandas as pd
 import spacy
+import random
 from checklist.perturb import Perturb
+import urllib.request
+import json 
 
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from copy import deepcopy
 
-nlp = spacy.load('en_core_web_sm')
+nlp = spacy.load('en_core_web_sm', disable=["tagger", "ner", "lemmatizer"])
 
 ## reference objects to be used in perturbations
 
@@ -32,7 +36,10 @@ for pair in pairs:
     DICT_GENDER[pair[1]] = pair[0]
 """list of gendered words and pronouns to be replaced in related perturbations"""
 
-def custom_remove_char(text_orig, char):
+data = urllib.request.urlopen('https://raw.githubusercontent.com/marcotcr/checklist/115f123de47ab015b2c3a6baebaffb40bab80c9f/checklist/data/names.json').read()
+DICT_NAMES = json.loads(data)
+
+def _custom_remove_char(text_orig, char):
     """Removes characters from a list of string
     Inputs: 
     text: String or list that has strings as elements. Transformation will be applied to all strings.
@@ -55,54 +62,15 @@ def custom_remove_char(text_orig, char):
         result.append(text[i].translate(table))
     if type(text_orig) == str:
         result = result[0]
-    return result 
+    return result
 
-
+def _gen_empty_columns():
+    new_column_tokens = []
+    new_column_concat = []
+    new_column_success = []
+    return new_column_tokens, new_column_concat, new_column_success
 
 ## perturbations
-
-def checklist_strip_punctuation(df, sentence_col_name):
-    """
-    Strip trailing punctuation
-
-    :param df: DataFrame containing sentences
-    :param sentence_col_name: Name of column containing sentence to be perturbed
-    :return: None. Modifies DataFrame in-place
-    """
-    # Checklist requires pre-processing with Spacy for these perturbations
-    pdata = list(nlp.pipe(df[sentence_col_name]))
-
-    stripped_sentences = [Perturb.strip_punctuation(pdata[i]) for i in range(len(pdata))]
-
-    df[sentence_col_name + '_strip_punct'] = stripped_sentences
-
-    # Create success flag as not all sentences will contain punctuation:
-    df['success_strip_punct'] = np.where(
-        df[sentence_col_name + '_strip_punct'] != df[sentence_col_name],
-        1,
-        0
-    )
-
-
-def checklist_add_typos(df, sentence_col_name):
-    """
-    Adds typos by removing last letter of one word and appending to start of next
-
-    :param df: DataFrame containing sentences
-    :param sentence_col_name: Name of column containing sentence to be perturbed
-    :return: None. Modifies DataFrame in-place
-    """
-    sentences_w_typos = [Perturb.add_typos(df[sentence_col_name][i]) for i in range(len(df))]
-
-    df[sentence_col_name + '_add_typos'] = sentences_w_typos
-
-    # Create success flag
-    df['success_add_typos'] = np.where(
-        df[sentence_col_name + '_add_typos'] != df[sentence_col_name],
-        1,
-        0
-    )
-
 
 def checklist_contract_sentence(df, sentence_col_name):
     """
@@ -122,7 +90,6 @@ def checklist_contract_sentence(df, sentence_col_name):
         1,
         0
     )
-
 
 def checklist_change_names(df, sentence_col_name):
     """
@@ -152,136 +119,232 @@ def checklist_change_names(df, sentence_col_name):
     )
 
     # Un-perturbed sentences will be null
-    df[sentence_col_name + '_change_names'] = df[sentence_col_name].map(original_to_pert)
+    df[sentence_col_name + '_change_names_checklist'] = df[sentence_col_name].map(original_to_pert)
 
     # Success flag
-    df['success_change_names'] = np.where(
-        ~df[sentence_col_name + '_change_names'].isnull(),
+    df['success_change_names_checklist'] = np.where(
+        ~df[sentence_col_name + '_change_names_checklist'].isnull(),
         1,
         0
     )
 
     # Fill nulls with original
-    df[sentence_col_name + '_change_names'] = np.where(
-        df[sentence_col_name + '_change_names'].isnull(),
+    df[sentence_col_name + '_change_names_checklist'] = np.where(
+        df[sentence_col_name + '_change_names_checklist'].isnull(),
         df[sentence_col_name],
-        df[sentence_col_name + '_change_names']
+        df[sentence_col_name + '_change_names_checklist']
     )
 
-def custom_remove_comma(df, sentence_col_name, tokens_orig):
+def custom_change_names(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list, dict_names: dict = DICT_NAMES):
+    """
+    Change name in sentence if one exists and if name is in CheckList's name lookup json
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
+    :return: None. Modifies DataFrame in-place
+    """
+
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
+
+    name_categories = list(dict_names.keys())[:2]
+ 
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        perturbed_indices = []
+        for t in range(len(sentence)):
+            for category in name_categories:
+                if sentence[t] in dict_names[category]:
+                    name = sentence[t]
+                    while name == sentence[t]:
+                        name_index = random.randint(0, len(dict_names[category])-1)
+                        name = dict_names[category][name_index]
+                    sentence[t] = name
+                    perturbed_indices.append(t)
+                    break
+            # limit number of perturbations to 1
+            if len(perturbed_indices) > 0:
+                break
+                    
+        new_column_tokens.append(sentence)
+        if len(perturbed_indices) == 0:
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            new_column_concat.append(" ".join(sentence))
+            new_column_success.append(f'1, perturbed tokens: {perturbed_indices}')
+
+    df[sentence_col_name + '_change_names_concat'] = new_column_concat
+    df[sentence_col_name + '_change_names_tokens'] = new_column_tokens
+    df['success_change_names'] = new_column_success
+
+def custom_add_typo(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
+    """
+    Add typo using checklist library
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
+    :return: None. Modifies DataFrame in-place
+    """
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
+
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        token_length = 1
+        attempts = 0
+        while token_length <= 1 and attempts < 10:
+            index_pert = random.randint(1, len(sentence) - 2)
+            token_length = len(sentence[index_pert])
+            attempts += 1
+        if token_length <= 1:
+            new_column_tokens.append(sentence)
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            sentence[index_pert+1] = sentence[index_pert][-1] + sentence[index_pert+1]
+            sentence[index_pert] = sentence[index_pert][:-1]
+            new_column_tokens.append(sentence)
+            new_column_concat.append(" ".join(sentence))
+            new_column_success.append(f'1, perturbed tokens: {index_pert, index_pert+1}')
+
+    df[sentence_col_name + '_add_typo_concat'] = new_column_concat
+    df[sentence_col_name + '_add_typo_tokens'] = new_column_tokens
+    df['success_add_typo'] = new_column_success
+
+
+def custom_strip_trailing_punct(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
+    """
+    Remove punctuation at end of sentence
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
+    :return: None. Modifies DataFrame in-place
+    """
+
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
+
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        if sentence[-1] in PUNCTUATION:
+            sentence = sentence[:-1]
+            new_column_concat.append(" ".join(sentence))
+            new_column_success.append(1)
+        else:
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        new_column_tokens.append(sentence)           
+
+    df[sentence_col_name + '_strip_punct_concat'] = new_column_concat
+    df[sentence_col_name + '_strip_punct_tokens'] = new_column_tokens
+    df['success_strip_punct'] = new_column_success
+
+def custom_remove_commas(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     """
     Remove all commas from sentence
 
     :param df: DataFrame containing sentences
     :param sentence_col_name: Name of column containing sentence to be perturbed
-    :param tokenizer to be applied to the sentence
+    :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
 
-    tokens_pert = [custom_remove_char(sentence, ',') for sentence in tokens_orig]
-
-    empty_indices = []
-    for i in range(len(tokens_pert)):
-        if tokens_pert[i] == tokens_orig[i]:
-            empty_indices.append(None)
-        else:
-            empty_indices_sentence = []
-            for t in range(len(tokens_pert[i])):
-                if tokens_pert[i][t] == '':
-                    empty_indices_sentence.append(t)
-            empty_indices.append(empty_indices_sentence)
-
-    new_column_sentence = []
-    new_column_success = []
-
-    for i in range(len(tokens_pert)):
-        if empty_indices[i] == None:
-            new_column_sentence.append(df[sentence_col_name][i])
-            new_column_success.append(0)
-        
-        else:
-            new_column_sentence.append(" ".join(tokens_pert[i]))
-            new_column_success.append(f'1, tokens removed: {empty_indices[i]}')
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
     
-    df[sentence_col_name + '_remove_commas'] = new_column_sentence
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        sentence_pert = _custom_remove_char(sentence, ',')
+        if sentence == sentence_pert:
+            new_column_tokens.append(tokens_orig[s])
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            empty_indices = []
+            # tracking the indices of tokens that have been removed
+            for t in range(len(sentence)):
+                if sentence_pert[t] == '':
+                    empty_indices.append(t)
+            new_column_tokens.append(sentence_pert)
+            new_column_concat.append(" ".join(sentence_pert))
+            new_column_success.append(f'1, tokens removed: {empty_indices}')
+
+    df[sentence_col_name + '_remove_commas_concat'] = new_column_concat
+    df[sentence_col_name + '_remove_commas_tokens'] = new_column_tokens
     df['success_remove_commas'] = new_column_success
 
-def custom_remove_all_punctuation(df, sentence_col_name, tokens_orig):
+def custom_remove_all_punctuation(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     """
     Remove all punctuation from sentence
 
     :param df: DataFrame containing sentences
     :param sentence_col_name: Name of column containing sentence to be perturbed
-    :param tokenizer to be applied to the sentence
+    :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
 
-    tokens_pert = [custom_remove_char(sentence, PUNCTUATION) for sentence in tokens_orig]
-
-    empty_indices = []
-    for i in range(len(tokens_pert)):
-        if tokens_pert[i] == tokens_orig[i]:
-            empty_indices.append(None)
-        else:
-            empty_indices_sentence = []
-            for t in range(len(tokens_pert[i])):
-                if tokens_pert[i][t] == '':
-                    empty_indices_sentence.append(t)
-            empty_indices.append(empty_indices_sentence)
-
-    new_column_sentence = []
-    new_column_success = []
-
-    for i in range(len(tokens_pert)):
-        if empty_indices[i] == None:
-            new_column_sentence.append(df[sentence_col_name][i])
-            new_column_success.append(0)
-        
-        else:
-            new_column_sentence.append(" ".join(tokens_pert[i]))
-            new_column_success.append(f'1, tokens removed: {empty_indices[i]}')
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
     
-    df[sentence_col_name + '_remove_all_punct'] = new_column_sentence
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        sentence_pert = _custom_remove_char(sentence, PUNCTUATION)
+        if sentence == sentence_pert:
+            new_column_tokens.append(tokens_orig[s])
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            empty_indices = []
+            # tracking the indices of tokens that have been removed
+            for t in range(len(sentence)):
+                if sentence_pert[t] == '':
+                    empty_indices.append(t)
+            new_column_tokens.append(sentence_pert)
+            new_column_concat.append(" ".join(sentence_pert))
+            new_column_success.append(f'1, tokens removed: {empty_indices}')
+    
+    df[sentence_col_name + '_remove_all_punct_concat'] = new_column_concat
+    df[sentence_col_name + '_remove_all_punct_tokens'] = new_column_tokens
     df['success_remove_all_punct'] = new_column_success
 
 
-def custom_switch_gender(df, sentence_col_name, tokens_orig, dict_gender = DICT_GENDER):
+def custom_switch_gender(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list, dict_gender: dict = DICT_GENDER):
     """
     Change gendered words
 
     :param df: DataFrame containing sentences
     :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
     :param dict_gender: look-up dict of words to change
-    :param tokenizer to be applied to the sentence
     :return: None. Modifies DataFrame in-place
     """
-    tokens = deepcopy(tokens_orig)
 
-    new_column_sentence = [None for i in range(len(df))]
-    new_column_success = [None for i in range(len(df))]
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
-    for s in range(len(tokens)):
-        sentence = tokens[s]
-        changes = 0
-        for i in range(len(sentence)):
-            if sentence[i] in dict_gender:
-                sentence[i] = dict_gender[sentence[i]]
-                changes += 1
-        if changes > 0:
-            new_column_sentence[s] = " ".join(tokens[s])
-            new_column_success[s] = 1
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        perturbed_indices = []
+        for t in range(len(sentence)):
+            if sentence[t] in dict_gender:
+                sentence[t] = dict_gender[sentence[t]]
+                perturbed_indices.append(t)
+        new_column_tokens.append(sentence)
+        if len(perturbed_indices) == 0:
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
         else:
-            new_column_sentence[s] = df[sentence_col_name][s]
-            new_column_success[s] = 0
+            new_column_concat.append(" ".join(sentence))
+            new_column_success.append(f'1, perturbed tokens: {perturbed_indices}')
 
-    df[sentence_col_name + '_switch_gender'] = new_column_sentence
+    df[sentence_col_name + '_switch_gender_concat'] = new_column_concat
+    df[sentence_col_name + '_switch_gender_tokens'] = new_column_tokens
     df['success_switch_gender'] = new_column_success
 
-perturbations_with_tokenization = [custom_remove_comma, custom_remove_all_punctuation, custom_switch_gender]
+perturbations_with_tokenization = [custom_remove_commas, custom_remove_all_punctuation, custom_switch_gender, \
+    custom_strip_trailing_punct, custom_add_typo, custom_change_names]
 """list of perturbations that require tokenisation"""
 
 def add_perturbations(
-        df, sentence_col_name, perturbation_functions, seed=3, tokenizer = None
+        df: pd.DataFrame, sentence_col_name: str, perturbation_functions, seed=3, tokenizer = None
 ):
     """
     Apply multiple perturbations, generating a new column for each perturbation
@@ -296,9 +359,8 @@ def add_perturbations(
 
     tokenizer = tokenizer or SpacyTokenizer()
 
-    # verify if any of the perturbation functions require tokenization
-    if len(set(perturbation_functions + perturbations_with_tokenization)) != len(perturbation_functions) + len(perturbations_with_tokenization):
-        tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] for i in range(len(df))]
+    tokens_orig = [[str(x) for x in tokenizer.tokenize(df[sentence_col_name][i])] for i in range(len(df))]
+    df[sentence_col_name + '_tokens'] = tokens_orig
 
     np.random.seed(seed)  # Set seed as some perturbations are stochastic
 
