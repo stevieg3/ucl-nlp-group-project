@@ -160,7 +160,7 @@ class DatasetAGNews(Dataset):
     def train_val_test(self) -> typing.Iterable[pd.DataFrame]:
         return self.train_val_test_splitsize()
 
-    def train_val_test_splitsize(self, split_size=.1, random_state=None) -> typing.Iterable[pd.DataFrame]:
+    def train_val_test_splitsize(self, split_size=.1) -> typing.Iterable[pd.DataFrame]:
         '''
         Return train, val and test dataframes.
 
@@ -173,8 +173,6 @@ class DatasetAGNews(Dataset):
         ----------
             split_size : float
                 the ratio of validation fold in the original training fold (default 0.1)
-            random_state : typing.Any
-                random state, used by scikit-learn in sklearn.model_selection.train_test_split (default None)
         Returns
         -------
             train : pd.DataFrame
@@ -189,7 +187,7 @@ class DatasetAGNews(Dataset):
         train_val = self._preprocess(train_val)
         test = self._preprocess(test)
         train, val = sklearn.model_selection.train_test_split(train_val, test_size=split_size,
-                                                              random_state=random_state)
+                                                              shuffle=False)
         self.cleanup()
         return train, val, test
 
