@@ -9,7 +9,7 @@ import json
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from copy import deepcopy
 
-nlp = spacy.load('en_core_web_sm', disable=["tagger", "ner", "lemmatizer"])
+nlp = spacy.load('en_core_web_sm')
 
 ## reference objects to be used in perturbations
 
@@ -72,7 +72,7 @@ def _gen_empty_columns():
 
 ## perturbations
 
-def checklist_contract_sentence(df, sentence_col_name):
+def checklist_contract_sentence(df, sentence_col_name, tokens_orig):
     """
     Contract sentence length by using abbreviations e.g. "it is" to "it's"
 
@@ -91,53 +91,9 @@ def checklist_contract_sentence(df, sentence_col_name):
         0
     )
 
-def checklist_change_names(df, sentence_col_name):
+def custom_change_first_names(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     """
-    Change name in sentence if one exists and if name is in CheckList's name lookup json
-
-    :param df: DataFrame containing sentences
-    :param sentence_col_name: Name of column containing sentence to be perturbed
-    :return: None. Modifies DataFrame in-place
-    """
-    # Checklist requires pre-processing with Spacy for these perturbations
-    pdata = list(nlp.pipe(df[sentence_col_name]))
-
-    # Only returns sentences with successful perturbations else drops
-    change_name_raw_output = Perturb.perturb(
-        pdata,
-        Perturb.change_names,
-        keep_original=True,  # Keeps original sentence
-        n=1  # Number of replacements to generate
-    )['data']
-
-    # key=original, value=perturbed
-    original_to_pert = dict(
-        zip(
-            [sent_pair[0] for sent_pair in change_name_raw_output],
-            [sent_pair[1] for sent_pair in change_name_raw_output]
-        )
-    )
-
-    # Un-perturbed sentences will be null
-    df[sentence_col_name + '_change_names_checklist'] = df[sentence_col_name].map(original_to_pert)
-
-    # Success flag
-    df['success_change_names_checklist'] = np.where(
-        ~df[sentence_col_name + '_change_names_checklist'].isnull(),
-        1,
-        0
-    )
-
-    # Fill nulls with original
-    df[sentence_col_name + '_change_names_checklist'] = np.where(
-        df[sentence_col_name + '_change_names_checklist'].isnull(),
-        df[sentence_col_name],
-        df[sentence_col_name + '_change_names_checklist']
-    )
-
-def custom_change_names(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list, dict_names: dict = DICT_NAMES):
-    """
-    Change name in sentence if one exists and if name is in CheckList's name lookup json
+    Change first name in sentence if one exists and if name is in CheckList's name lookup json
 
     :param df: DataFrame containing sentences
     :param sentence_col_name: Name of column containing sentence to be perturbed
@@ -146,37 +102,122 @@ def custom_change_names(df: pd.DataFrame, sentence_col_name: str, tokens_orig: l
     """
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
-
-    name_categories = list(dict_names.keys())[:2]
+    # Checklist requires pre-processing with Spacy for these perturbations
+    pdata = list(nlp.pipe(df[sentence_col_name]))
  
     for s in range(len(tokens_orig)):
         sentence = tokens_orig[s]
-        perturbed_indices = []
-        for t in range(len(sentence)):
-            for category in name_categories:
-                if sentence[t] in dict_names[category]:
-                    name = sentence[t]
-                    while name == sentence[t]:
-                        name_index = random.randint(0, len(dict_names[category])-1)
-                        name = dict_names[category][name_index]
-                    sentence[t] = name
-                    perturbed_indices.append(t)
-                    break
-            # limit number of perturbations to 1
-            if len(perturbed_indices) > 0:
-                break
-                    
-        new_column_tokens.append(sentence)
-        if len(perturbed_indices) == 0:
+        new_sentence = Perturb.change_names(pdata[s], n = 1, first_only=True, meta=True)
+        if not new_sentence:
+            new_column_tokens.append(sentence)
             new_column_concat.append(df[sentence_col_name][s])
             new_column_success.append(0)
         else:
-            new_column_concat.append(" ".join(sentence))
-            new_column_success.append(f'1, perturbed tokens: {perturbed_indices}')
+            # extract token that has been perturbed
+            token_pert = new_sentence[1][0][0]
+            # verify that perturbed name appears as token in the original input
+            if token_pert in sentence:
+                # obtain index
+                token_index = sentence.index(token_pert)
+                new_sentence_tokens = deepcopy(sentence)
+                new_sentence_tokens[token_index] = new_sentence[1][0][1]
+                new_column_tokens.append(new_sentence_tokens)
+                new_column_concat.append(new_sentence[0][0])
+                new_column_success.append([1, [token_index]])
+            # if token cannot be found in original list of tokens
+            else:
+                new_column_tokens.append(sentence)
+                new_column_concat.append(df[sentence_col_name][s])
+                new_column_success.append(0)
 
-    df[sentence_col_name + '_change_names_concat'] = new_column_concat
-    df[sentence_col_name + '_change_names_tokens'] = new_column_tokens
-    df['success_change_names'] = new_column_success
+    df[sentence_col_name + '_change_first_name_concat'] = new_column_concat
+    df[sentence_col_name + '_change_first_name_tokens'] = new_column_tokens
+    df['success_change_first_name'] = new_column_success
+
+def custom_change_last_names(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
+    """
+    Change last name in sentence if one exists and if name is in CheckList's name lookup json
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
+    :return: None. Modifies DataFrame in-place
+    """
+
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
+    # Checklist requires pre-processing with Spacy for these perturbations
+    pdata = list(nlp.pipe(df[sentence_col_name]))
+ 
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        new_sentence = Perturb.change_names(pdata[s], n = 1, last_only=True, meta=True)
+        if not new_sentence:
+            new_column_tokens.append(sentence)
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            # extract token that has been perturbed
+            token_pert = new_sentence[1][0][0]
+            # verify that perturbed name appears as token in the original input
+            if token_pert in sentence:
+                # obtain index
+                token_index = sentence.index(token_pert)
+                new_sentence_tokens = deepcopy(sentence)
+                new_sentence_tokens[token_index] = new_sentence[1][0][1]
+                new_column_tokens.append(new_sentence_tokens)
+                new_column_concat.append(new_sentence[0][0])
+                new_column_success.append([1, [token_index]])
+            else:
+                new_column_tokens.append(sentence)
+                new_column_concat.append(df[sentence_col_name][s])
+                new_column_success.append(0)
+
+    df[sentence_col_name + '_change_last_name_concat'] = new_column_concat
+    df[sentence_col_name + '_change_last_name_tokens'] = new_column_tokens
+    df['success_change_last_name'] = new_column_success
+
+def custom_change_location(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
+    """
+    Change location in sentence if one exists and if location is in CheckList's location lookup json
+
+    :param df: DataFrame containing sentences
+    :param sentence_col_name: Name of column containing sentence to be perturbed
+    :param tokens_orig: tokenised version of sentence
+    :return: None. Modifies DataFrame in-place
+    """
+
+    new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
+    # Checklist requires pre-processing with Spacy for these perturbations
+    pdata = list(nlp.pipe(df[sentence_col_name]))
+ 
+    for s in range(len(tokens_orig)):
+        sentence = tokens_orig[s]
+        new_sentence = Perturb.change_location(pdata[s], n = 1, meta=True)
+        if not new_sentence:
+            new_column_tokens.append(sentence)
+            new_column_concat.append(df[sentence_col_name][s])
+            new_column_success.append(0)
+        else:
+            # extract token that has been perturbed
+            token_pert = new_sentence[1][0][0]
+            # verify that perturbed name appears as token in the original input
+            if token_pert in sentence:
+                # obtain index
+                token_index = sentence.index(token_pert)
+                new_sentence_tokens = deepcopy(sentence)
+                new_sentence_tokens[token_index] = new_sentence[1][0][1]
+                new_column_tokens.append(new_sentence_tokens)
+                new_column_concat.append(new_sentence[0][0])
+                new_column_success.append([1, [token_index]])
+            # if token cannot be found in original list of tokens
+            else:
+                new_column_tokens.append(sentence)
+                new_column_concat.append(df[sentence_col_name][s])
+                new_column_success.append(0)
+
+    df[sentence_col_name + '_change_location_concat'] = new_column_concat
+    df[sentence_col_name + '_change_location_tokens'] = new_column_tokens
+    df['success_change_location_name'] = new_column_success
 
 def custom_add_typo(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     """
@@ -206,7 +247,7 @@ def custom_add_typo(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list)
             sentence[index_pert] = sentence[index_pert][:-1]
             new_column_tokens.append(sentence)
             new_column_concat.append(" ".join(sentence))
-            new_column_success.append(f'1, perturbed tokens: {index_pert, index_pert+1}')
+            new_column_success.append([1, [index_pert, index_pert+1]])
 
     df[sentence_col_name + '_add_typo_concat'] = new_column_concat
     df[sentence_col_name + '_add_typo_tokens'] = new_column_tokens
@@ -267,7 +308,7 @@ def custom_remove_commas(df: pd.DataFrame, sentence_col_name: str, tokens_orig: 
                     empty_indices.append(t)
             new_column_tokens.append(sentence_pert)
             new_column_concat.append(" ".join(sentence_pert))
-            new_column_success.append(f'1, tokens removed: {empty_indices}')
+            new_column_success.append([1, [empty_indices]])
 
     df[sentence_col_name + '_remove_commas_concat'] = new_column_concat
     df[sentence_col_name + '_remove_commas_tokens'] = new_column_tokens
@@ -300,7 +341,7 @@ def custom_remove_all_punctuation(df: pd.DataFrame, sentence_col_name: str, toke
                     empty_indices.append(t)
             new_column_tokens.append(sentence_pert)
             new_column_concat.append(" ".join(sentence_pert))
-            new_column_success.append(f'1, tokens removed: {empty_indices}')
+            new_column_success.append([1, [empty_indices]])
     
     df[sentence_col_name + '_remove_all_punct_concat'] = new_column_concat
     df[sentence_col_name + '_remove_all_punct_tokens'] = new_column_tokens
@@ -333,15 +374,11 @@ def custom_switch_gender(df: pd.DataFrame, sentence_col_name: str, tokens_orig: 
             new_column_success.append(0)
         else:
             new_column_concat.append(" ".join(sentence))
-            new_column_success.append(f'1, perturbed tokens: {perturbed_indices}')
+            new_column_success.append([1, [perturbed_indices]])
 
     df[sentence_col_name + '_switch_gender_concat'] = new_column_concat
     df[sentence_col_name + '_switch_gender_tokens'] = new_column_tokens
     df['success_switch_gender'] = new_column_success
-
-perturbations_with_tokenization = [custom_remove_commas, custom_remove_all_punctuation, custom_switch_gender, \
-    custom_strip_trailing_punct, custom_add_typo, custom_change_names]
-"""list of perturbations that require tokenisation"""
 
 def add_perturbations(
         df: pd.DataFrame, sentence_col_name: str, perturbation_functions, seed=3, tokenizer = None
@@ -365,9 +402,6 @@ def add_perturbations(
     np.random.seed(seed)  # Set seed as some perturbations are stochastic
 
     for perturbation in perturbation_functions:
-        if perturbation in perturbations_with_tokenization:
-            perturbation(df, sentence_col_name, tokens_orig)
-        else:
-            perturbation(df, sentence_col_name)
+        perturbation(df, sentence_col_name, tokens_orig)
 
     return df
