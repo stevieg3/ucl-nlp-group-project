@@ -91,6 +91,78 @@ class Model:
         '''
         self._load_model_from_dataset(dataset)
 
+    @abstractmethod
+    def predict(self, s: str) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
+        pass
+
+    def predict_batch_df(self, df: pd.DataFrame, input_col: str) -> pd.DataFrame:
+        '''
+        Proxy for predict_batch that takes a dataframe and input column.
+
+        Parameters
+        ----------
+            df : pd.DataFrame
+                input dataframe
+            input_col : str
+                sentence/text column in that dataframe to predict on
+        Returns
+        -------
+            prediction_report : pd.DataFrame
+                same return as for predict_batch
+        '''
+        return self.predict_batch(df[input_col])
+
+    def predict_label(self, s: str) -> typing.Iterable[int]:
+        '''
+        Predicts classification label for a given input instance.
+
+        Parameters
+        ----------
+            s : str
+                sentence/text instances to predict for (iterable)
+        Returns
+        -------
+            label : int
+                predicted label
+        '''
+        return self.predict(s).label.astype(int).unique()
+
+    def predict_label_batch(self, s: typing.Iterable[str]) -> typing.Iterable[int]:
+        '''
+        Predicts classification label for given input sentences.
+
+        Parameters
+        ----------
+            s : [str]
+                sentence/text instances to predict for (iterable)
+        Returns
+        -------
+            label : [int]
+                predicted label
+        '''
+        return self.predict_batch(s).label.to_numpy(dtype=int)
+
+    def predict_label_batch_df(self, df: pd.DataFrame, input_col: str) -> typing.Iterable[int]:
+        '''
+        Predicts classification label for given dataframe and input column.
+
+        Parameters
+        ----------
+            df : pd.DataFrame
+                input dataframe
+            input_col : str
+                sentence/text column in that dataframe to predict on
+        Returns
+        -------
+            label : [int]
+                predicted label
+        '''
+        return self.predict_label_batch(df[input_col])
+
 
 @allennlp.predictors.predictor.Predictor.register('allennlp_text_classifier')
 class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
@@ -212,7 +284,7 @@ class BCNModel(Model):
 
     def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
         '''
-        Predicts classification label for a given input instance
+        Predicts classification for a given input instance
 
         Parameters
         ----------
@@ -236,6 +308,5 @@ if __name__ == "__main__":
     data = load_agnews()
     # data = load_sst()
     bcn = BCNModel()
-    bpython.embed(locals_=dict(globals(), **locals()))
     bcn.load_model(data)
     bpython.embed(locals_=dict(globals(), **locals()))
