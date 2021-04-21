@@ -218,7 +218,7 @@ class BCNModel(Model):
 
     @overrides
     def _get_model_filepath_for_dataset(self, dataset) -> str:
-        self.output_dir = os.path.join(self.cache_dir, f'bcn-{dataset.NAME}_output')
+        self.output_dir = os.path.relpath(os.path.join(project_root_dir, 'models', f'bcn-{dataset.NAME}_output'), start=os.curdir)
         self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
         return os.path.join(self.output_dir, 'model.tar.gz')
 
