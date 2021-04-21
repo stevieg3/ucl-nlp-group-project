@@ -117,51 +117,31 @@ class Model:
         return self.predict_batch(df[input_col])
 
     def predict_label(self, s: str) -> typing.Iterable[int]:
-        '''
-        Predicts classification label for a given input instance.
-
-        Parameters
-        ----------
-            s : str
-                sentence/text instances to predict for (iterable)
-        Returns
-        -------
-            label : int
-                predicted label
-        '''
         return self.predict(s).label.astype(int).unique()
 
     def predict_label_batch(self, s: typing.Iterable[str]) -> typing.Iterable[int]:
-        '''
-        Predicts classification label for given input sentences.
-
-        Parameters
-        ----------
-            s : [str]
-                sentence/text instances to predict for (iterable)
-        Returns
-        -------
-            label : [int]
-                predicted label
-        '''
         return self.predict_batch(s).label.to_numpy(dtype=int)
 
     def predict_label_batch_df(self, df: pd.DataFrame, input_col: str) -> typing.Iterable[int]:
-        '''
-        Predicts classification label for given dataframe and input column.
-
-        Parameters
-        ----------
-            df : pd.DataFrame
-                input dataframe
-            input_col : str
-                sentence/text column in that dataframe to predict on
-        Returns
-        -------
-            label : [int]
-                predicted label
-        '''
         return self.predict_label_batch(df[input_col])
+
+    def predict_proba(self, s: str) -> typing.Iterable[int]:
+        return self.predict(s).class_probabilities
+
+    def predict_proba_batch(self, s: typing.Iterable[str]) -> typing.Iterable[int]:
+        return np.array([x for x in self.predict_batch(s).class_probabilities])
+
+    def predict_proba_batch_df(self, df: pd.DataFrame, input_col: str) -> typing.Iterable[int]:
+        return self.predict_proba_batch(df[input_col])
+
+    def predict_logits(self, s: str) -> typing.Iterable[int]:
+        return self.predict(s).logits
+
+    def predict_logits_batch(self, s: typing.Iterable[str]) -> typing.Iterable[int]:
+        return np.array([x for x in self.predict_batch(s).logits])
+
+    def predict_logits_batch_df(self, df: pd.DataFrame, input_col: str) -> typing.Iterable[int]:
+        return self.predict_logits_batch(df[input_col])
 
 
 @allennlp.predictors.predictor.Predictor.register('allennlp_text_classifier')

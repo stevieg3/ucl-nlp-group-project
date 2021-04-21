@@ -36,7 +36,18 @@ print(bcn.predict_batch(test[data.SENTENCE][:100]))
 
 print(f'Individual label prediction for {data.NAME}')
 print(bcn.predict_label(test.sentence[0]))
-
 print(f'Batched label prediction for {data.NAME}')
 bcn.predict_label_batch_df(test[:100], input_col=data.SENTENCE)
 print(bcn.predict_label_batch(test.sentence[:100]))
+
+print(f'Individual proba prediction for {data.NAME}')
+print(bcn.predict_proba(test.sentence[0]))
+print(f'Batched label prediction for {data.NAME}')
+bcn.predict_proba_batch_df(test[:10], input_col=data.SENTENCE)
+print(bcn.predict_proba_batch(test.sentence[:10]))
+
+print(f'Individual logits prediction for {data.NAME}')
+print(bcn.predict_logits(test.sentence[0]))
+print(f'Batched logits prediction for {data.NAME}')
+bcn.predict_logits_batch_df(test[:10], input_col=data.SENTENCE)
+print(bcn.predict_logits_batch(test.sentence[:10]))
