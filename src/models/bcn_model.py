@@ -270,6 +270,23 @@ class BCNModel(Model):
         self.vocab = self.model.vocab
         self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
 
+    def finetune_report(self) -> dict:
+        '''
+        Obtain fine-tuning report
+
+        Parameters
+        ----------
+        Returns
+        -------
+            finetune_report : dict
+                fine-tuning metrics
+        '''
+        assert self.model is not None, 'will not load accuracy report before the model is present'
+        report_file = os.path.join(self.output_dir, 'metrics.json')
+        with open(report_file, 'r') as f:
+            j = json.load(f)
+        return j
+
     @overrides
     def predict(self, s: str) -> pd.DataFrame:
         '''
