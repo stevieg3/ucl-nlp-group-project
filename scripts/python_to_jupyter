@@ -1,0 +1,22 @@
+#!/bin/bash -v
+
+
+pyscript=$1; shift
+
+[ -e "$pyscript" ] || {
+  >&2 echo "error: specify existing python script"
+  exit 1
+}
+
+kernel_name=$1; shift
+
+[ -z "$kernel_name" ] && {
+  >&2 echo "warning: kernel_name not specified, using default ''"
+  kernel_name=""
+}
+
+# must install p2j
+p2j -o "$pyscript"
+ipynbscript=${pyscript/.py/.ipynb}
+jupyter nbconvert --execute --to=notebook --inplace --allow-errors --ExecutePreprocessor.kernel_name=$kernel_name "$ipynbscript"
+jupyter nbconvert --to=pdf "$ipynbscript"

@@ -12,7 +12,6 @@ import typing
 from overrides import overrides
 from abc import abstractmethod
 
-import tagging
 import spacy
 import allennlp
 import allennlp.predictors
@@ -24,9 +23,11 @@ import transformers
 
 # add project root directory to the search path
 project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.append(project_root_dir)
+if project_root_dir not in sys.path:
+    sys.path.append(project_root_dir)
 from src.data.dataload import *
-import notebooks.AllenNLP.BCN_model as BCN_model
+import src.models.BCN_model
+import src.models.tagging
 
 
 class Model:
