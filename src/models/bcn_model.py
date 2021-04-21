@@ -205,6 +205,7 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
+    @overrides
     def __init__(self):
         super(BCNModel, self).__init__()
         self.model = None
@@ -215,6 +216,7 @@ class BCNModel(Model):
         self.config_file_template = self._relpath_to('config_BCN.jsonnet.template')
         self.config_file = None
 
+    @overrides
     def _get_model_filepath_for_dataset(self, dataset) -> str:
         self.output_dir = os.path.join(self.cache_dir, f'bcn-{dataset.NAME}_output')
         self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
@@ -260,6 +262,7 @@ class BCNModel(Model):
         os.chdir(PWD)
         assert os.path.isdir(self.output_dir)
 
+    @overrides
     def _load_finetuned_model(self, filepath: str) -> None:
         assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
         archive = allennlp.models.archival.load_archive(filepath)
@@ -267,6 +270,7 @@ class BCNModel(Model):
         self.vocab = self.model.vocab
         self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
 
+    @overrides
     def predict(self, s: str) -> pd.DataFrame:
         '''
         Predicts classification label for a given input instance
@@ -282,6 +286,7 @@ class BCNModel(Model):
         '''
         return pd.DataFrame(self.predictor.predict(sentence=s))
 
+    @overrides
     def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
         '''
         Predicts classification for a given input instance
