@@ -28,6 +28,7 @@ if project_root_dir not in sys.path:
 from src.data.dataload import *
 import src.models.BCN_model
 import src.models.tagging
+from src.models.tagging.dataset_readers.allennlp_reader import AllenNLPReader
 
 
 class Model:
