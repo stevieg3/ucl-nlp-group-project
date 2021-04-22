@@ -5,6 +5,7 @@ Some steps adapted from https://medium.com/@aniruddha.choudhury94/part-2-bert-fi
 -classification-on-the-corpus-of-linguistic-18057ce330e1
 """
 
+import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import \
@@ -12,7 +13,8 @@ from torch.utils.data import \
     DataLoader
 from transformers import \
     BertForSequenceClassification, \
-    AdamW
+    AdamW, \
+    BertTokenizer
 from transformers.trainer_utils import \
     set_seed
 from tqdm import tqdm
@@ -93,7 +95,13 @@ def create_sentence_input_arrays(list_encoded_sentences, max_length):
     return train_array, train_attention_mask_array
 
 
-def fine_tune_bert(device, train_data_loader, dev_data_loader, num_labels, hyperparameter_dict):
+def fine_tune_bert(
+        device: torch.device,
+        train_data_loader: DataLoader,
+        dev_data_loader: DataLoader,
+        num_labels: int,
+        hyperparameter_dict: dict
+):
     """
     Fine tune BERT-base-uncased
 
@@ -221,7 +229,15 @@ def fine_tune_bert(device, train_data_loader, dev_data_loader, num_labels, hyper
     return bert_model
 
 
-def make_predictions(df, model, tokenizer, sentence_col_name, device, max_length, hyperparameter_dict):
+def make_predictions(
+        df: pd.DataFrame,
+        model: BertForSequenceClassification,
+        tokenizer: BertTokenizer,
+        sentence_col_name: str,
+        device: torch.device,
+        max_length: int,
+        hyperparameter_dict: dict
+):
     """
     Make predictions on DataFrame containing sentences with given model
 
