@@ -16,6 +16,7 @@ from src.data.constants import \
 
 nlp = spacy.load('en_core_web_sm')
 
+
 def _custom_remove_char(text_orig, char):
     """Removes characters from a list of string
     Inputs: 
@@ -40,6 +41,7 @@ def _custom_remove_char(text_orig, char):
     if type(text_orig) == str:
         result = result[0]
     return result
+
 
 def _gen_empty_columns():
     new_column_tokens = []
@@ -154,11 +156,12 @@ def contraction(df: pd.DataFrame, orig_index: int, tokens_orig: list):
             new_column_concat.append(" ".join(sentence))
             new_column_success_flag.append(1)
             new_column_pert_indices.append(pert_indices)
-    
+
     df['contraction_concat'] = new_column_concat
     df['contraction_tokens'] = new_column_tokens
     df['contraction_success'] = new_column_success_flag
     df['contraction_pert_ind'] = new_column_pert_indices
+
 
 def change_first_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
@@ -172,7 +175,7 @@ def change_first_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
 
     new_column_tokens, new_column_concat, new_column_success_flag, new_column_pert_indices = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
-    pdata = list(nlp.pipe(df.iloc[:,orig_index]))
+    pdata = list(nlp.pipe(df.iloc[:, orig_index]))
 
     for s in range(len(tokens_orig)):
         sentence = tokens_orig[s]
@@ -209,6 +212,7 @@ def change_first_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     df['change_first_name_success'] = new_column_success_flag
     df['change_first_name_pert_ind'] = new_column_pert_indices
 
+
 def change_last_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
     Change last name in sentence if one exists and if name is in CheckList's name lookup json
@@ -221,7 +225,7 @@ def change_last_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
 
     new_column_tokens, new_column_concat, new_column_success_flag, new_column_pert_indices = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
-    pdata = list(nlp.pipe(df.iloc[:,orig_index]))
+    pdata = list(nlp.pipe(df.iloc[:, orig_index]))
 
     for s in range(len(tokens_orig)):
         sentence = tokens_orig[s]
@@ -255,6 +259,7 @@ def change_last_name(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     df['change_last_name_success'] = new_column_success_flag
     df['change_last_name_pert_ind'] = new_column_pert_indices
 
+
 def change_location(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
     Change location in sentence if one exists and if location is in CheckList's location lookup json
@@ -267,7 +272,7 @@ def change_location(df: pd.DataFrame, orig_index: int, tokens_orig: list):
 
     new_column_tokens, new_column_concat, new_column_success_flag, new_column_pert_indices = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
-    pdata = list(nlp.pipe(df.iloc[:,orig_index]))
+    pdata = list(nlp.pipe(df.iloc[:, orig_index]))
 
     for s in range(len(tokens_orig)):
         sentence = tokens_orig[s]
@@ -296,11 +301,12 @@ def change_location(df: pd.DataFrame, orig_index: int, tokens_orig: list):
                 new_column_concat.append(df.iloc[s, orig_index])
                 new_column_success_flag.append(0)
                 new_column_pert_indices.append(None)
-    
+
     df['change_location_concat'] = new_column_concat
     df['change_location_tokens'] = new_column_tokens
     df['change_location_success'] = new_column_success_flag
     df['change_location_pert_ind'] = new_column_pert_indices
+
 
 def add_typo(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
@@ -339,12 +345,13 @@ def add_typo(df: pd.DataFrame, orig_index: int, tokens_orig: list):
             new_column_tokens.append(sentence)
             new_column_concat.append(" ".join(sentence))
             new_column_success_flag.append(1)
-            new_column_pert_indices.append([index_pert, index_pert+1])
+            new_column_pert_indices.append([index_pert, index_pert + 1])
 
     df['add_typo_concat'] = new_column_concat
     df['add_typo_tokens'] = new_column_tokens
     df['add_typo_success'] = new_column_success_flag
     df['add_typo_pert_ind'] = new_column_pert_indices
+
 
 def strip_trailing_punct(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
@@ -376,6 +383,7 @@ def strip_trailing_punct(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     df['strip_punct_success'] = new_column_success_flag
     df['strip_punct_pert_ind'] = new_column_pert_indices
 
+
 def remove_commas(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
     Remove all commas from sentence
@@ -406,11 +414,12 @@ def remove_commas(df: pd.DataFrame, orig_index: int, tokens_orig: list):
             new_column_concat.append(" ".join(sentence_pert))
             new_column_success_flag.append(1)
             new_column_pert_indices.append(empty_indices)
-    
+
     df['remove_commas_concat'] = new_column_concat
     df['remove_commas_tokens'] = new_column_tokens
     df['remove_commas_success'] = new_column_success_flag
     df['remove_commas_pert_ind'] = new_column_pert_indices
+
 
 def remove_all_punctuation(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
@@ -448,6 +457,7 @@ def remove_all_punctuation(df: pd.DataFrame, orig_index: int, tokens_orig: list)
     df['remove_all_punct_success'] = new_column_success_flag
     df['remove_all_punct_pert_ind'] = new_column_pert_indices
 
+
 def switch_gender(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     """
     Change gendered words
@@ -481,6 +491,7 @@ def switch_gender(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     df['switch_gender_tokens'] = new_column_tokens
     df['switch_gender_success'] = new_column_success_flag
     df['switch_gender_pert_ind'] = new_column_pert_indices
+
 
 def add_perturbations(
         df: pd.DataFrame, tokenizer, sentence_col_name: str, perturbation_functions, seed=3
