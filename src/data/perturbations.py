@@ -59,6 +59,7 @@ def swap_adjectives(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list)
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
@@ -95,6 +96,7 @@ def contraction(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
@@ -165,6 +167,7 @@ def change_first_name(df: pd.DataFrame, sentence_col_name: str, tokens_orig: lis
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
@@ -209,6 +212,7 @@ def change_last_name(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
@@ -252,6 +256,7 @@ def change_location(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list)
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
     # Checklist requires pre-processing with Spacy for this perturbation
@@ -296,6 +301,8 @@ def add_typo(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
+
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
     for s in range(len(tokens_orig)):
@@ -331,6 +338,7 @@ def strip_trailing_punct(df: pd.DataFrame, sentence_col_name: str, tokens_orig: 
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
@@ -359,6 +367,7 @@ def remove_commas(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list):
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
@@ -393,6 +402,7 @@ def remove_all_punctuation(df: pd.DataFrame, sentence_col_name: str, tokens_orig
     :param tokens_orig: tokenised version of sentence
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
@@ -428,6 +438,7 @@ def switch_gender(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list, d
     :param dict_gender: look-up dict of words to change
     :return: None. Modifies DataFrame in-place
     """
+    df.reset_index(inplace=True, drop=True)
 
     new_column_tokens, new_column_concat, new_column_success = _gen_empty_columns()
 
