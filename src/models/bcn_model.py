@@ -202,12 +202,16 @@ class BCNModel(Model):
         self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
         return os.path.join(self.output_dir, 'model.tar.gz')
 
+    def _relpath_from_modeldir(self, s):
+        return os.path.relpath(s, start=self.modeldir)
+
     def _finetune_setup_config(self, dataset) -> None:
         config_bcn = None
         with open(self.config_file_template, 'r') as f:
             config_bcn = json.load(f)
         # set up reader
         trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.cache_dir)
+        trainfile, valfile, testfile = [self._relpath_from_modeldir(f) for f in [trainfile, valfile, testfile]]
         print('saved', [trainfile, valfile, testfile])
         config_bcn.update(dict(
             dataset_reader={
@@ -229,17 +233,17 @@ class BCNModel(Model):
 
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         self._finetune_setup_config(dataset)
-        PWD = os.path.curdir
+        rel_curdir = self._relpath_from_modeldir(os.path.curdir)
         os.chdir(self.modeldir)
         print(f'cd "{self.modeldir}"')
         command = ['allennlp', 'train']
         command += ['--include-package', 'tagging']
-        command += ['-s', self.output_dir]
-        command += [self.config_file]
+        command += ['-s', self._relpath_from_modeldir(self.output_dir)]
+        command += [self._relpath_from_modeldir(self.config_file)]
         print('executing', command)
         subprocess.call(command)
-        print(f'cd "{PWD}"')
-        os.chdir(PWD)
+        print(f'cd "{rel_curdir}"')
+        os.chdir(rel_curdir)
         assert os.path.isdir(self.output_dir)
 
     @overrides
@@ -307,7 +311,7 @@ class BCNModel(Model):
 
 if __name__ == "__main__":
     import bpython
-    data = load_agnews()
+    data = load_sst()
     # data = load_sst()
     bcn = BCNModel()
     bcn.load_model(data)

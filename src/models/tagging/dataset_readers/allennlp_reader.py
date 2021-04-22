@@ -13,10 +13,16 @@ from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 import os
 import sys
 project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
-sys.path.append(project_root_dir)
+if project_root_dir not in sys.path:
+    sys.path.append(project_root_dir)
 from src.data.dataload import *
 
 logger = logging.getLogger(__name__)
+
+# compatibility fix for spacy 3
+logger = logging.getLogger("spacy")
+logger.setLevel(logging.ERROR)
+print('ignoring warnings from spacy')
 
 @DatasetReader.register("allennlp_reader")
 class AllenNLPReader(DatasetReader):
