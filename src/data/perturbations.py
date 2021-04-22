@@ -368,10 +368,10 @@ def strip_trailing_punct(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     for s in range(len(tokens_orig)):
         sentence = deepcopy(tokens_orig[s])
         if sentence[-1] in PUNCTUATION:
-            sentence = sentence[:-1]
+            sentence[-1] = ''
             new_column_concat.append(" ".join(sentence))
             new_column_success_flag.append(1)
-            new_column_pert_indices.append([len(sentence)])
+            new_column_pert_indices.append([len(sentence)-1])
         else:
             new_column_concat.append(df.iloc[s, orig_index])
             new_column_success_flag.append(0)
