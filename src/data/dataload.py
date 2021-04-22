@@ -5,6 +5,8 @@ import os
 import zipfile
 import typing
 
+from abc import abstractmethod
+
 import pandas as pd
 import datasets
 import pytreebank
@@ -13,7 +15,77 @@ import sklearn.model_selection
 
 
 class Dataset:
-    def cleanup(self) -> None:
+    NAME: typing.Optional[str] = None
+    TARGET = 'label'
+    SENTENCE = 'sentence'
+
+    def __init__(self):
+        self.datadir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
+
+    @property
+    @abstractmethod
+    def train_val_test(self):
+        pass
+
+    @abstractmethod
+    def _load_data(self):
+        pass
+
+    def _preprocess(self, df):
+        return df
+
+    def save_train_val_test_jsonl(self, dirname='.', prefix=None) -> typing.Iterable[str]:
+        '''
+        Save train, validation and test data into a directory in json-lines format.
+
+        Sample usage:
+
+        > agnews = load_agnews()
+        > train, val, test = agnews.train_val_test  # dataframes
+        > trainfile, valfile, testfile = agnews.save_train_val_test_jsonl(dirname='.')
+
+        Parameters
+        ----------
+            dirname : str
+                the directory in which the three files will be saved (default '.')
+            prefix : str
+                filename prefix for the files (default None)
+        Returns
+        -------
+            trainfile : str
+                file path where train fold is saved
+            validationfile : str
+                file path where validation fold is saved
+            testfile : str
+                file path where test fold is saved
+        '''
+        prefix = f'{self.NAME}_' if prefix is None else prefix
+        self._load_data()
+        self._save_data_as_jsonl_files(dirname=dirname, prefix=prefix)
+        files = ['train', 'validation', 'test']
+        return [os.path.join(dirname, prefix + f + '.jsonl') for f in files]
+
+    def _rename_lookup(self):
+        return dict()
+
+    def _save_data_as_jsonl_files(self, dirname, prefix, override=False) -> None:
+        files = ['train', 'validation', 'test']
+        train, dev, test = self.train_val_test
+        # if json files don't exist, we need to write them
+        if not os.path.isdir(dirname) and dirname != '':
+            os.mkdir(dirname)
+        for f, df in zip(files, self.train_val_test):
+            writepath = os.path.join(dirname, prefix + f + '.jsonl')
+            if os.path.isfile(writepath) and not override:
+                continue
+            self.save_jsonl(df=df, filepath=writepath)
+
+    @staticmethod
+    def save_jsonl(df: pd.DataFrame, filepath: str) -> None:
+        assert filepath.endswith('jsonl')
+        df.to_json(filepath, orient='records', lines=True)
+
+    def cleanup(self):
         self.data.clear()
         self.data = None
 
@@ -43,7 +115,7 @@ class DatasetSST(Dataset):
                     lab, sent = labeled_tree_obj.to_labeled_lines()[0]
                     labels += [lab]
                     sentences += [sent]
-                pdframes[k_to] = pd.DataFrame(dict(sentence=sentences, label=labels))
+                pdframes[k_to] = pd.DataFrame(dict(sentencee=sentences, label=labels))
             self.data = pdframes
         return self.data
 

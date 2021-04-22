@@ -5,6 +5,7 @@ ag_news_datasets.py.lock
 /bin
 /lib
 /.venv
+*.lock
 
 
 *.zip
