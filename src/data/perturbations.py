@@ -463,11 +463,12 @@ def switch_gender(df: pd.DataFrame, sentence_col_name: str, tokens_orig: list, d
 
 
 def add_perturbations(
-        df: pd.DataFrame, sentence_col_name: str, perturbation_functions, seed=3, tokenizer=None
+        df: pd.DataFrame, tokenizer, sentence_col_name: str, perturbation_functions, seed=3
 ):
     """
     Apply multiple perturbations, generating a new column for each perturbation
 
+    :param tokenizer: SpacyTokenizer or BertTokenizer
     :param df: DataFrame containing sentences
     :param sentence_col_name: Name of column containing sentence to be perturbed
     :param perturbation_functions: List of perturbation functions
@@ -475,8 +476,6 @@ def add_perturbations(
     :return: DataFrame with additional columns containing perturbed sentences and success flags
     """
     df = df.copy()
-
-    tokenizer = tokenizer or SpacyTokenizer()
 
     sentence_array = df[sentence_col_name].values
 
