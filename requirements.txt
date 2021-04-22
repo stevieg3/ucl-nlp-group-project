@@ -13,3 +13,4 @@ checklist==0.0.10
 allennlp==2.1.0
 typing==3.7.4.3
 pytreebank==0.2.7
+spacy==3.0.5
