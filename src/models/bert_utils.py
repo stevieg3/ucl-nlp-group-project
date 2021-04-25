@@ -5,7 +5,6 @@ Some steps adapted from https://medium.com/@aniruddha.choudhury94/part-2-bert-fi
 -classification-on-the-corpus-of-linguistic-18057ce330e1
 """
 
-import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import \
@@ -33,7 +32,8 @@ Number of labels in SST
 SST_BERT_HYPERPARAMETERS = {
     'batch_size': 32,
     'learning_rate': 2e-5,
-    'number_of_epochs': 2
+    'number_of_epochs': 2,
+    'max_length': SST_MAX_LENGTH
 }
 """
 Selected hyperparameters for fine-tuning BERT on SST dataset
@@ -52,7 +52,8 @@ Number of labels in AGNews
 AGN_BERT_HYPERPARAMETERS = {
     'batch_size': 16,
     'learning_rate': 2e-5,
-    'number_of_epochs': 2
+    'number_of_epochs': 2,
+    'max_length': AGN_MAX_LENGTH
 }
 """
 Selected hyperparameters for fine-tuning BERT on AGNews dataset
@@ -64,7 +65,48 @@ Random seed for model fine-tuning
 """
 
 
-def pad_sentence_at_end(sentence, max_length):
+class PreTrainedBERT:
+    """
+    Class for loading pre-trained BERT model for SST or AGNews datasets
+    """
+    def __init__(self, device: torch.device, dataset: str, model_filepath="models"):
+        """
+        :param device: torch.device
+        :param dataset: 'sst' or 'agn'
+        :param model_filepath: Filepath containing fine-tuned-bert-base-{dataset} folder
+        """
+        self.device = device
+
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+
+        model_filepath = model_filepath + '/' + f'fine-tuned-bert-base-{dataset}'
+        self.bert = BertForSequenceClassification.from_pretrained(model_filepath)
+        self.bert.to(self.device)
+
+        if dataset == 'sst':
+            self.hyperparameter_dict = SST_BERT_HYPERPARAMETERS.copy()
+        elif dataset == 'agn':
+            self.hyperparameter_dict = AGN_BERT_HYPERPARAMETERS.copy()
+
+    def predict(self, sentence_array: np.array) -> (np.array, np.array):
+        """
+        Make predictions
+
+        :param sentence_array: NumPy array of sentences
+        :return: NumPy array of logits by class, NumPy array of probabilities by class
+        """
+        logits, probs = make_predictions(
+            sentence_array=sentence_array,
+            model=self.bert,
+            tokenizer=self.tokenizer,
+            device=self.device,
+            hyperparameter_dict=self.hyperparameter_dict
+        )
+
+        return logits, probs
+
+
+def _pad_sentence_at_end(sentence, max_length):
     """
     Pad tokenised sentence with zeros at end
 
@@ -79,14 +121,14 @@ def pad_sentence_at_end(sentence, max_length):
     return np.array(padded_sentence)
 
 
-def create_sentence_input_arrays(list_encoded_sentences, max_length):
+def _create_sentence_input_arrays(list_encoded_sentences, max_length):
     """
     Create input arrays for BERT
 
     :param: list_encoded_sentences: List of sentence encoding lists
     :param: max_length: max length to pad up to
     """
-    encoded_sentences = [pad_sentence_at_end(sent, max_length) for sent in list_encoded_sentences]
+    encoded_sentences = [_pad_sentence_at_end(sent, max_length) for sent in list_encoded_sentences]
 
     train_array = np.vstack(encoded_sentences)
 
@@ -230,39 +272,32 @@ def fine_tune_bert(
 
 
 def make_predictions(
-        df: pd.DataFrame,
-        model: BertForSequenceClassification,
-        tokenizer: BertTokenizer,
-        sentence_col_name: str,
-        device: torch.device,
-        max_length: int,
-        hyperparameter_dict: dict
+    sentence_array: np.array,
+    model: BertForSequenceClassification,
+    tokenizer: BertTokenizer,
+    device: torch.device,
+    hyperparameter_dict: dict
 ):
     """
     Make predictions on DataFrame containing sentences with given model
 
-    :param df: DataFrame containing input sentences to be classified
     :param model: Torch model
     :param tokenizer: BERT-base tokenizer
-    :param sentence_col_name: Name of column containing input sentences
     :param device: Torch device
     :param max_length: Max length of input sequence (for padding)
     :param hyperparameter_dict: Dictionary of model hyperparameters
     :return: NumPy array of label predictions
     """
     # Prepare data
-
-    df = df.copy()
-
     encoded_sentences = []
 
-    for sentence in df[sentence_col_name].values:
+    for sentence in sentence_array:
         enc_sent_as_list = tokenizer.encode(sentence, add_special_tokens=True)
         encoded_sentences.append(enc_sent_as_list)
 
-    input_array, input_attention_mask_array = create_sentence_input_arrays(
+    input_array, input_attention_mask_array = _create_sentence_input_arrays(
         encoded_sentences,
-        max_length
+        hyperparameter_dict['max_length']
     )
 
     input_tensor = torch.tensor(input_array)
@@ -276,7 +311,7 @@ def make_predictions(
 
     model.eval()
 
-    predicted_labels = []
+    logit_list = []
 
     for batch in tqdm(input_data_loader):
 
@@ -291,10 +326,9 @@ def make_predictions(
             )
 
         logits = outputs[0]
+        logit_list.append(logits)
 
-        batch_pred_labels = list(
-            torch.argmax(logits, dim=1).cpu().numpy()
-        )
-        predicted_labels = predicted_labels + batch_pred_labels
+    logits_tensor = torch.cat(logit_list, dim=0)
+    prob_tensor = torch.softmax(logits_tensor, dim=1)
 
-    return np.array(predicted_labels)
+    return np.array(logits_tensor), np.array(prob_tensor)
