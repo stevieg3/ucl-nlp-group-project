@@ -34,12 +34,16 @@ from src.models.tagging.dataset_readers.allennlp_reader import AllenNLPReader
 class Model:
     def __init__(self):
         self.model = None
-        self.modeldir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
+        self.scriptdir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
+        self.modeldir = os.path.relpath(os.path.join(self.scriptdir, '..', '..', 'models'), os.path.curdir)
+        self.datadir = os.path.relpath(os.path.join(self.scriptdir, '..', '..', 'data'), os.path.curdir)
 
-    def _relpath_to(self, filename=''):
+    def _path_to(self, filename, dirname=None):
+        if dirname is None:
+            dirname = self.scriptdir
         if filename == '':
-            return self.modeldir
-        return os.path.join(self.modeldir, filename)
+            return dirname
+        return os.path.join(dirname, filename)
 
     def _download_if_not_exists(self, url: str, filepath: str, override=False) -> str:
         if os.path.isfile(filepath) and not override:
@@ -192,27 +196,26 @@ class BCNModel(Model):
         self.model = None
         self.vocab = None
         self.predictor = None
-        self.cache_dir = self._relpath_to('')
-        self.output_dir = self._relpath_to('')
-        self.config_file_template = self._relpath_to('config_BCN.jsonnet.template')
+        self.output_dir = None
+        self.config_file_template = self._path_to('config_BCN.jsonnet.template', dirname=self.scriptdir)
         self.config_file = None
 
     @overrides
     def _get_model_filepath_for_dataset(self, dataset) -> str:
         self.output_dir = os.path.relpath(os.path.join(project_root_dir, 'models', f'bcn-{dataset.NAME}_output'), start=os.curdir)
-        self.config_file = os.path.join(self.cache_dir, f'config_BCN_{dataset.NAME}.jsonnet')
+        self.config_file = self._path_to(f'config_BCN_{dataset.NAME}.jsonnet', dirname=self.modeldir)
         return os.path.join(self.output_dir, 'model.tar.gz')
 
-    def _relpath_from_modeldir(self, s):
-        return os.path.relpath(s, start=self.modeldir)
+    def _relpath_from_scriptdir(self, s):
+        return os.path.relpath(s, start=self.scriptdir)
 
     def _finetune_setup_config(self, dataset) -> None:
         config_bcn = None
         with open(self.config_file_template, 'r') as f:
             config_bcn = json.load(f)
         # set up reader
-        trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.cache_dir)
-        trainfile, valfile, testfile = [self._relpath_from_modeldir(f) for f in [trainfile, valfile, testfile]]
+        trainfile, valfile, testfile = dataset.save_train_val_test_jsonl(dirname=self.datadir)
+        trainfile, valfile, testfile = [self._relpath_from_scriptdir(f) for f in [trainfile, valfile, testfile]]
         print('saved', [trainfile, valfile, testfile])
         config_bcn.update(dict(
             dataset_reader={
@@ -234,13 +237,13 @@ class BCNModel(Model):
 
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         self._finetune_setup_config(dataset)
-        rel_curdir = self._relpath_from_modeldir(os.path.curdir)
-        os.chdir(self.modeldir)
-        print(f'cd "{self.modeldir}"')
+        rel_curdir = self._relpath_from_scriptdir(os.path.curdir)
+        os.chdir(self.scriptdir)
+        print(f'cd "{self.scriptdir}"')
         command = ['allennlp', 'train']
         command += ['--include-package', 'tagging']
-        command += ['-s', self._relpath_from_modeldir(self.output_dir)]
-        command += [self._relpath_from_modeldir(self.config_file)]
+        command += ['-s', self._relpath_from_scriptdir(self.output_dir)]
+        command += [self._relpath_from_scriptdir(self.config_file)]
         print('executing', command)
         subprocess.call(command)
         print(f'cd "{rel_curdir}"')
@@ -313,7 +316,7 @@ class BCNModel(Model):
 if __name__ == "__main__":
     import bpython
     data = load_sst()
-    # data = load_sst()
+    # data = load_agnews()
     bcn = BCNModel()
     bcn.load_model(data)
     bpython.embed(locals_=dict(globals(), **locals()))
