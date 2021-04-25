@@ -4,7 +4,7 @@ project_root_dir = os.path.relpath(os.path.join('..', '..'), os.curdir)
 if project_root_dir not in sys.path:
     sys.path += [project_root_dir]
 from src.data.dataload import *
-from src.models.bcn_model import *
+from src.models.bcnmodel import *
 from pprint import pprint
 
 # # Data
