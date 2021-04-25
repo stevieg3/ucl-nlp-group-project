@@ -106,7 +106,7 @@ class PreTrainedBERT:
         return logits, probs
 
 
-def _pad_sentence_at_end(sentence, max_length):
+def _pad_sentence_at_end(sentence: list, max_length: int) -> np.array:
     """
     Pad tokenised sentence with zeros at end
 
@@ -121,7 +121,7 @@ def _pad_sentence_at_end(sentence, max_length):
     return np.array(padded_sentence)
 
 
-def _create_sentence_input_arrays(list_encoded_sentences, max_length):
+def _create_sentence_input_arrays(list_encoded_sentences: list, max_length: int) -> (np.array, np.array):
     """
     Create input arrays for BERT
 
@@ -143,7 +143,7 @@ def fine_tune_bert(
         dev_data_loader: DataLoader,
         num_labels: int,
         hyperparameter_dict: dict
-):
+) -> BertForSequenceClassification:
     """
     Fine tune BERT-base-uncased
 
@@ -277,7 +277,7 @@ def make_predictions(
     tokenizer: BertTokenizer,
     device: torch.device,
     hyperparameter_dict: dict
-):
+) -> (np.array, np.array):
     """
     Make predictions on DataFrame containing sentences with given model
 
