@@ -114,6 +114,7 @@ class BCNModel(Model):
             json.dump(config_bcn, f)
         print('config file', self.config_file)
 
+    @overrides
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
         self._finetune_setup_config(dataset)
         rel_curdir = self._relpath_from_scriptdir(os.path.curdir)
