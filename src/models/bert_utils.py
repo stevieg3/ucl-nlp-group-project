@@ -19,91 +19,10 @@ from transformers.trainer_utils import \
 from tqdm import tqdm
 
 
-SST_MAX_LENGTH = 70
-"""
-Max length of input sequence for SST dataset
-"""
-
-SST_NUM_LABELS = 5
-"""
-Number of labels in SST
-"""
-
-SST_BERT_HYPERPARAMETERS = {
-    'batch_size': 32,
-    'learning_rate': 2e-5,
-    'number_of_epochs': 2,
-    'max_length': SST_MAX_LENGTH
-}
-"""
-Selected hyperparameters for fine-tuning BERT on SST dataset
-"""
-
-AGN_MAX_LENGTH = 380
-"""
-Max length of input sequence for AGNews dataset
-"""
-
-AGN_NUM_LABELS = 4
-"""
-Number of labels in AGNews
-"""
-
-AGN_BERT_HYPERPARAMETERS = {
-    'batch_size': 16,
-    'learning_rate': 2e-5,
-    'number_of_epochs': 2,
-    'max_length': AGN_MAX_LENGTH
-}
-"""
-Selected hyperparameters for fine-tuning BERT on AGNews dataset
-"""
-
 RANDOM_SEED = 3
 """
 Random seed for model fine-tuning
 """
-
-
-class PreTrainedBERT:
-    """
-    Class for loading pre-trained BERT model for SST or AGNews datasets
-    """
-    def __init__(self, device: torch.device, dataset: str, model_filepath="models"):
-        """
-        :param device: torch.device
-        :param dataset: 'sst' or 'agn'
-        :param model_filepath: Filepath containing fine-tuned-bert-base-{dataset} folder
-        """
-        self.device = device
-
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-
-        model_filepath = model_filepath + '/' + f'fine-tuned-bert-base-{dataset}'
-        self.bert = BertForSequenceClassification.from_pretrained(model_filepath)
-        self.bert.to(self.device)
-
-        if dataset == 'sst':
-            self.hyperparameter_dict = SST_BERT_HYPERPARAMETERS.copy()
-        elif dataset == 'agn':
-            self.hyperparameter_dict = AGN_BERT_HYPERPARAMETERS.copy()
-
-    def predict(self, sentence_array: np.array) -> (np.array, np.array):
-        """
-        Make predictions
-
-        :param sentence_array: NumPy array of sentences
-        :return: NumPy array of logits by class, NumPy array of probabilities by class
-        """
-        logits, probs = make_predictions(
-            sentence_array=sentence_array,
-            model=self.bert,
-            tokenizer=self.tokenizer,
-            device=self.device,
-            hyperparameter_dict=self.hyperparameter_dict
-        )
-
-        return logits, probs
 
 
 def _pad_sentence_at_end(sentence: list, max_length: int) -> np.array:
@@ -331,4 +250,4 @@ def make_predictions(
     logits_tensor = torch.cat(logit_list, dim=0)
     prob_tensor = torch.softmax(logits_tensor, dim=1)
 
-    return np.array(logits_tensor), np.array(prob_tensor)
+    return np.array(logits_tensor.cpu()), np.array(prob_tensor.cpu())

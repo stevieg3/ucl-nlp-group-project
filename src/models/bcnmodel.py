@@ -69,6 +69,8 @@ class AllenNLPClassifier(allennlp.predictors.predictor.Predictor):
 
 
 class BCNModel(Model):
+    MODELTYPE = 'allennlp'
+
     @overrides
     def __init__(self):
         super(BCNModel, self).__init__()

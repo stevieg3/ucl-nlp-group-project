@@ -16,8 +16,8 @@ import sklearn.model_selection
 
 class Dataset:
     NAME: typing.Optional[str] = None
-    TARGET = 'label'
-    SENTENCE = 'sentence'
+    TARGET: str = 'label'
+    SENTENCE: str = 'sentence'
 
     def __init__(self):
         self.datadir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
@@ -25,11 +25,11 @@ class Dataset:
     @property
     @abstractmethod
     def train_val_test(self):
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _load_data(self):
-        pass
+        raise NotImplementedError()
 
     def _preprocess(self, df):
         return df
