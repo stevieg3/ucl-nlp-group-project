@@ -85,7 +85,7 @@ class Dataset:
         assert filepath.endswith('jsonl')
         df.to_json(filepath, orient='records', lines=True)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self.data.clear()
         self.data = None
 
@@ -203,7 +203,8 @@ class DatasetAGNews(Dataset):
 
     def _load_data(self) -> pd.DataFrame:
         if self.data is None:
-            relpath = os.path.join(self.datadir, 'ag_news_datasets')
+            datadir = os.path.dirname(__file__)
+            relpath = os.path.join(os.path.relpath(datadir, os.path.curdir), 'ag_news_datasets')
             self.data = datasets.load_dataset(relpath)
         return self.data
 
