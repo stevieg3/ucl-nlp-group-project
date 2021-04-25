@@ -14,6 +14,7 @@ import shap
 import torch
 from lime.lime_text import LimeTextExplainer
 from allennlp.interpret.saliency_interpreters import SimpleGradient
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 import numpy as np
 
 class Explainer:
@@ -117,11 +118,11 @@ class SHAPExplainer(Explainer):
 
 class AllenNLPExplainer(Explainer):
 
-  def __init__(self,model,tokenizer,labels,device):
+  def __init__(self,model):
 
     self.model=model
-    self.device=device
-    self.tokenizer=tokenizer
+    # self.tokenizer=tokenizer
+    # self.device=device
     self.predictor=model.predictor
     self.exp = SimpleGradient(self.predictor)
     
@@ -132,7 +133,8 @@ class AllenNLPExplainer(Explainer):
     returns - list of top tokens/importance weights
     '''
 
-    grad = self.exp.saliency_interpret_from_json({'Description':x})
+    explanation = self.exp.saliency_interpret_from_json({"sentence":x})
+    grad = explanation['instance_1']['grad_input_1']
 
     return grad
 
@@ -141,20 +143,15 @@ class AllenNLPExplainer(Explainer):
     '''
     X - array of input sentences
     '''
+    grad_list = []
 
-    pass
+    for s in X:
 
-    # top_tokens_list=[]
-    # top_values_list = []
+      grad = self.explain_instance(s)
 
-    # for s in X:
+      grad_list.append(grad)
 
-    #   top_tokens,top_values = self.explain_instance(s)
-
-    #   top_tokens_list.append(top_tokens)
-    #   top_values_list.append(top_values)
-
-    # return top_tokens_list,top_values_list
+    return grad_list
 
 def predict_proba_BERT(x,model,tokenizer,device):
 
