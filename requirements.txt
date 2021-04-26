@@ -15,3 +15,4 @@ allennlp-models==2.1.0
 typing==3.7.4.3
 pytreebank==0.2.7
 spacy==3.0.5
+importlib-metadata==3.3.0
