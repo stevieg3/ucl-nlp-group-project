@@ -16,11 +16,16 @@ from src.data.dataload import *
 
 
 class Model:
+    MODELTYPE: typing.Optional[str] = None
+
     def __init__(self):
         self.model = None
+        self.tokenizer = None
+        self.finetune_dataset = None
         self.scriptdir = os.path.relpath(os.path.dirname(__file__), os.path.curdir)
         self.modeldir = os.path.relpath(os.path.join(self.scriptdir, '..', '..', 'models'), os.path.curdir)
         self.datadir = os.path.relpath(os.path.join(self.scriptdir, '..', '..', 'data'), os.path.curdir)
+        self.dataset_finetune = None
 
     def _path_to(self, filename, dirname=None):
         if dirname is None:
@@ -43,11 +48,11 @@ class Model:
 
     @abstractmethod
     def _get_model_filepath_for_dataset(self, dataset) -> str:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _load_finetuned_model(self, filepath: str) -> None:
-        pass
+        raise NotImplementedError()
 
     def _load_model_from_url(self, url: str, filepath: str, override=False) -> None:
         self._download_if_not_exists(url=url, filepath=filepath, override=override)
@@ -55,7 +60,7 @@ class Model:
 
     @abstractmethod
     def _finetune_for_dataset(self, dataset, filepath: str) -> None:
-        pass
+        raise NotImplementedError()
 
     def _load_model_from_dataset(self, dataset, override=False) -> None:
         filepath = self._get_model_filepath_for_dataset(dataset)
@@ -78,15 +83,16 @@ class Model:
         Returns
         -------
         '''
+        self.dataset_finetune = dataset
         self._load_model_from_dataset(dataset)
 
     @abstractmethod
     def predict(self, s: str) -> pd.DataFrame:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def predict_batch(self, s: typing.Iterable[str]) -> pd.DataFrame:
-        pass
+        raise NotImplementedError()
 
     def predict_batch_df(self, df: pd.DataFrame, input_col: str) -> pd.DataFrame:
         '''
