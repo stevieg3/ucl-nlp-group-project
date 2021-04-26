@@ -135,8 +135,9 @@ class AllenNLPExplainer(Explainer):
 
     explanation = self.exp.saliency_interpret_from_json({"sentence":x})
     grad = explanation['instance_1']['grad_input_1']
+    label = self.predictor.predict(x)['label']
 
-    return grad
+    return grad, label
 
   @overrides
   def explain_instances(self,X):
@@ -144,14 +145,16 @@ class AllenNLPExplainer(Explainer):
     X - array of input sentences
     '''
     grad_list = []
+    label_list = []
 
     for s in X:
 
-      grad = self.explain_instance(s)
+      grad, label = self.explain_instance(s)
 
       grad_list.append(grad)
+      label_list.append(label)
 
-    return grad_list
+    return grad_list, label_list
 
 def predict_proba_BERT(x,model,tokenizer,device):
 
