@@ -16,8 +16,14 @@ from lime.lime_text import LimeTextExplainer
 from allennlp.interpret.saliency_interpreters import SimpleGradient
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 import numpy as np
+from src.data.dataload import *
 
 class Explainer:
+    DATASET_LABELS = {
+        DatasetSST.NAME: ['3','1','2','4','0'],
+        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],
+    }
+    
     def __init__(self):
         pass
 
@@ -39,18 +45,11 @@ class Explainer:
 
 class LimeExplainer(Explainer):
 
-  def __init__(self,model,tokenizer,labels,device,model_type='BERT'):
-    '''
-    predict_proba - predict function which will depend on model type
-    '''
+  def __init__(self,model):
+    labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
     self.exp = LimeTextExplainer(class_names=labels)
-    self.model=model
-    self.device=device
-    self.tokenizer=tokenizer
-    if model_type=='BERT':
-      self.predict_proba=lambda x:predict_proba_BERT(x,self.model,self.tokenizer,self.device)
-    elif model_type=='BCN':
-      self.predict_proba=lambda x:predict_proba_BCN(x,self.model)
+    self.tokenizer=model.tokenizer
+    self.predict_proba = lambda s: model.predict_proba_batch(s)
 
   def explain_instance(self,x):
     '''
@@ -58,14 +57,23 @@ class LimeExplainer(Explainer):
     
     returns - list of top tokens/importance weights
     '''
-    exp_instance=self.exp.explain_instance(x, self.predict_proba, num_features=10,top_labels=5,num_samples=50)
+
+    def predict_probs(x):
+        if isinstance(x,str):
+            x=[x]
+
+        values=self.predict_proba(x)
+
+        return values
+    
+    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=50,top_labels=10,num_samples=50)
 
     pred_label = np.argmax(exp_instance.predict_proba)
 
-    top_tokens=[x[0] for x in exp_instance.as_list(label=pred_label)]
-    top_values = [x[1] for x in exp_instance.as_list(label=pred_label)]
+    indices=[x[0] for x in exp_instance.as_map()[pred_label]]
+    values = [x[1] for x in exp_instance.as_map()[pred_label]]
 
-    return top_tokens,top_values
+    return indices,pred_label
 
   @overrides
   def explain_instances(self,X):
@@ -73,17 +81,21 @@ class LimeExplainer(Explainer):
     X - array of input sentences
     '''
 
-    top_tokens_list=[]
-    top_values_list = []
+    indices_list=[]
+    values_list = []
+    pred_list = []
 
     for s in X:
+        try:     
+            indices,pred = self.explain_instance(s)
 
-      top_tokens,top_values = self.explain_instance(s)
+        except:
+            indices,pred = ['N/A'],['N/A']
 
-      top_tokens_list.append(top_tokens)
-      top_values_list.append(top_values)
+        indices_list.append(indices)
+        pred_list.append(pred)
 
-    return top_tokens_list,top_values_list
+    return indices_list,pred_list
 
 class SHAPExplainer(Explainer):
 
@@ -179,7 +191,7 @@ def predict_proba_BCN(x,BCN_predictor):
   title = ' '
 
   a = BCN_predictor.predict_batch_json([
-      dict(title=title, Description=s) for s in x
+      dict(title=title, sentence=s) for s in x
   ])
 
   class_probs=np.array([t['class_probabilities'] for t in a])
