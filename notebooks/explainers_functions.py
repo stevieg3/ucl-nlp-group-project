@@ -17,6 +17,8 @@ from allennlp.interpret.saliency_interpreters import SimpleGradient
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 import numpy as np
 from src.data.dataload import *
+import matplotlib
+import matplotlib.pyplot as plt
 
 class Explainer:
     DATASET_LABELS = {
@@ -46,6 +48,9 @@ class Explainer:
 class LimeExplainer(Explainer):
 
   def __init__(self,model):
+    '''
+    predict_proba - predict function which will depend on model type
+    '''
     labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
     self.exp = LimeTextExplainer(class_names=labels)
     self.tokenizer=model.tokenizer
@@ -55,7 +60,8 @@ class LimeExplainer(Explainer):
     '''
     x - 1 input instance
     
-    returns - list of top tokens/importance weights
+    returns - lists of tokens/importance weights
+    sorted by the latter
     '''
 
     def predict_probs(x):
@@ -64,16 +70,37 @@ class LimeExplainer(Explainer):
 
         values=self.predict_proba(x)
 
+        #print(x)
+        #print(values)
+
         return values
     
-    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=50,top_labels=10,num_samples=50)
+    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=50,top_labels=10,num_samples=200)
+
+   
+
+    #fig=exp_instance.as_pyplot_figure()
+    #plt.show()
 
     pred_label = np.argmax(exp_instance.predict_proba)
 
     indices=[x[0] for x in exp_instance.as_map()[pred_label]]
     values = [x[1] for x in exp_instance.as_map()[pred_label]]
 
-    return indices,pred_label
+    tokens=[x[0] for x in exp_instance.as_list(label=pred_label)]
+
+    #sort by weights for convenience
+
+    zipped_lists = zip(values,indices,tokens)
+    sorted_tuples = sorted(zipped_lists,reverse=True)
+
+    tuples = zip(*sorted_tuples)
+    values,indices,tokens = [ list(tuple) for tuple in  tuples]
+    
+    print(tokens[:5])
+    print(values[:5])
+
+    return values,pred_label,indices,tokens
 
   @overrides
   def explain_instances(self,X):
@@ -84,30 +111,32 @@ class LimeExplainer(Explainer):
     indices_list=[]
     values_list = []
     pred_list = []
+    tokens_list = []
 
     for s in X:
         try:     
-            indices,pred = self.explain_instance(s)
+            values,pred,indices,tokens = self.explain_instance(s)
 
         except:
-            indices,pred = ['N/A'],['N/A']
+            indices = ['N/A']
 
-        indices_list.append(indices)
+        values_list.append(values)
         pred_list.append(pred)
+        tokens_list.append(tokens)
+        indices_list.append(indices)
 
-    return indices_list,pred_list
+    return values_list,pred_list,tokens_list,indices_list
 
 class SHAPExplainer(Explainer):
 
-  def __init__(self, model,tokenizer,labels,device):
+  def __init__(self, model):
     '''
     Currently works only with BERT
     '''
-    self.model=model
-    self.tokenizer=tokenizer
-    self.device=device
-    self.predict_proba = lambda x: predict_proba_BERT(x,model,tokenizer,device)
-    self.exp=shap.Explainer(self.predict_proba,self.tokenizer,output_names=labels)
+    labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
+    self.exp = LimeTextExplainer(class_names=labels)
+    self.tokenizer=model.tokenizer
+    self.predict_proba = lambda s: model.predict_proba_batch(s)
 
   @overrides
   def explain_instances(self,X):
@@ -168,31 +197,3 @@ class AllenNLPExplainer(Explainer):
 
     return grad_list, label_list
 
-def predict_proba_BERT(x,model,tokenizer,device):
-
-  '''
-  this depends on the model, will be passed to explainer
-  '''
-
-  if isinstance(x,str):
-    x=[x]
-
-  with torch.no_grad():
-    tv = torch.tensor([tokenizer.encode(v, padding='max_length', max_length=128,truncation=True) for v in x]).to(device)
-    attention_mask = (tv!=0).type(torch.int64).to(device)
-    outputs = model(tv,attention_mask=attention_mask)
-    scores = torch.softmax(outputs[0],dim=1)
-
-    return scores.cpu().detach().numpy()
-
-def predict_proba_BCN(x,BCN_predictor):
-
-  #predict only on the sentence
-  title = ' '
-
-  a = BCN_predictor.predict_batch_json([
-      dict(title=title, sentence=s) for s in x
-  ])
-
-  class_probs=np.array([t['class_probabilities'] for t in a])
-  return class_probs
