@@ -43,6 +43,7 @@ class LimeExplainer(Explainer):
     '''
     predict_proba - predict function which will depend on model type
     '''
+    
     labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
     self.exp = LimeTextExplainer(class_names=labels)
     self.tokenizer=model.tokenizer
@@ -89,9 +90,6 @@ class LimeExplainer(Explainer):
     tuples = zip(*sorted_tuples)
     values,indices,tokens = [ list(tuple) for tuple in  tuples]
     
-    print(tokens[:5])
-    print(values[:5])
-
     return values,pred_label,indices,tokens
 
   @overrides
@@ -110,7 +108,7 @@ class LimeExplainer(Explainer):
             values,pred,indices,tokens = self.explain_instance(s)
 
         except:
-            indices = ['N/A']
+            indices,values, pred,indices = ['N/A'],['N/A'],['N/A'],['N/A']
 
         values_list.append(values)
         pred_list.append(pred)
