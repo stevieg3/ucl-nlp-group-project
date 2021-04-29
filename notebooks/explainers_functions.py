@@ -126,9 +126,9 @@ class SHAPExplainer(Explainer):
     Currently works only with BERT
     '''
     labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
-    self.exp = LimeTextExplainer(class_names=labels)
     self.tokenizer=model.tokenizer
     self.predict_proba = lambda s: model.predict_proba_batch(s)
+    self.exp = shap.explainer(self.predict_proba,self.tokenizer,output_names=labels)
 
   @overrides
   def explain_instances(self,X):
