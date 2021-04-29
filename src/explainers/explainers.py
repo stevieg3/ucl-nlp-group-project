@@ -48,6 +48,7 @@ class LimeExplainer(Explainer):
     self.exp = LimeTextExplainer(class_names=labels)
     self.tokenizer=model.tokenizer
     self.predict_proba = lambda s: model.predict_proba_batch(s)
+    self.model=model
 
   def explain_instance(self,x):
     '''
@@ -127,6 +128,7 @@ class SHAPExplainer(Explainer):
     self.tokenizer=model.tokenizer
     self.predict_proba = lambda s: model.predict_proba_batch(s)
     self.exp = shap.Explainer(self.predict_proba,self.tokenizer,output_names=labels)
+    self.model=model
 
   @overrides
   def explain_instances(self,X):
