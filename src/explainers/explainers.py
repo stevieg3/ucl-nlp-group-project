@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
+
 class Explainer:
     DATASET_LABELS = {
         DatasetSST.NAME: ['3','1','2','4','0'],
@@ -39,7 +40,7 @@ class Explainer:
 
 class LimeExplainer(Explainer):
 
-  def __init__(self,model):
+  def __init__(self,model,num_samples=1000):
     '''
     predict_proba - predict function which will depend on model type
     '''
@@ -48,6 +49,8 @@ class LimeExplainer(Explainer):
     self.exp = LimeTextExplainer(class_names=labels)
     self.tokenizer=model.tokenizer
     self.predict_proba = lambda s: model.predict_proba_batch(s)
+    self.num_samples = num_samples
+
 
   def explain_instance(self,x):
     '''
@@ -61,14 +64,14 @@ class LimeExplainer(Explainer):
         if isinstance(x,str):
             x=[x]
 
-        values=self.predict_proba(x)
+        values=np.array(self.predict_proba(x))
 
-        #print(x)
-        #print(values)
+        values=np.nan_to_num(values)
 
         return values
     
-    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=100,top_labels=10,num_samples=750)
+
+    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=100,top_labels=10,num_samples=self.num_samples)
 
 
     #exp_instance.show_in_notebook(text=True)
