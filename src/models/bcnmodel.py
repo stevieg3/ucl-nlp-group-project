@@ -13,6 +13,7 @@ from overrides import overrides
 from abc import abstractmethod
 
 import spacy
+import torch
 import allennlp
 import allennlp.predictors
 
@@ -72,8 +73,11 @@ class BCNModel(Model):
     MODELTYPE = 'allennlp'
 
     @overrides
-    def __init__(self):
+    def __init__(self, device=None):
         super(BCNModel, self).__init__()
+        if device is None:
+            device = device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = device
         self.model = None
         self.vocab = None
         self.predictor = None
@@ -135,7 +139,8 @@ class BCNModel(Model):
     @overrides
     def _load_finetuned_model(self, filepath: str) -> None:
         assert os.path.isfile(filepath), f'file "{filepath}" does not exist'
-        archive = allennlp.models.archival.load_archive(filepath)
+        device_index = -1 if self.device.index is None else self.device.index
+        archive = allennlp.models.archival.load_archive(filepath, cuda_device=device_index)
         self.model = archive.model
         self.vocab = self.model.vocab
         self.predictor = allennlp.predictors.predictor.Predictor.from_archive(archive, 'allennlp_text_classifier')
