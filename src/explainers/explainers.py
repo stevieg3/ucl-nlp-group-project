@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 
 class Explainer:
     DATASET_LABELS = {
-        DatasetSST.NAME: ['3', '1', '2', '4', '0'],
-        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],
+        DatasetSST.NAME: ['3', '1', '2', '4', '0'],  # TODO Clarify why this order
+        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],  # TODO Clarify why this order
     }
 
     def __init__(self):
@@ -127,7 +127,9 @@ class SHAPExplainer(Explainer):
         '''
         Currently works only with BERT
         '''
-        labels = Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
+        label2id = model.model.config.label2id
+        labels = sorted(label2id, key=label2id.get)
+
         self.tokenizer = model.tokenizer
         self.predict_proba = lambda s: model.predict_proba_batch(s)
         self.exp = shap.Explainer(
@@ -142,9 +144,7 @@ class SHAPExplainer(Explainer):
 
         shap_values = self.exp(X)
 
-        tokens, values = shap_values.data, shap_values.values
-
-        return tokens, values
+        return shap_values
 
     @overrides
     def explain_instance(self, x):
