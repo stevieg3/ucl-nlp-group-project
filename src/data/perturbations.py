@@ -66,7 +66,7 @@ def swap_adjectives(df: pd.DataFrame, orig_index: int, tokens_orig: list):
     for s in range(len(tokens_orig)):
         sentence = deepcopy(tokens_orig[s])
         pert_indices = []
-        for t in range(1, len(sentence)):
+        for t in range(1, len(sentence)-1):
             if sentence[t] in ['and', 'or']:
                 if sentence[t - 1] in ADJECTIVES and sentence[t + 1] in ADJECTIVES:
                     adj_1 = str(sentence[t - 1])
