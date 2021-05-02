@@ -12,181 +12,184 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-
 class Explainer:
     DATASET_LABELS = {
-        DatasetSST.NAME: ['3','1','2','4','0'],
-        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],
+        DatasetSST.NAME: ['3', '1', '2', '4', '0'],  # TODO Clarify why this order
+        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],  # TODO Clarify why this order
     }
-    
+
     def __init__(self):
         pass
 
     @abstractmethod
-    def explain_instance(self,s:str)->typing.Any:
-      '''
-      s - input string
-      returns - tokens, weights
-      '''
-      pass
+    def explain_instance(self, s: str) -> typing.Any:
+        '''
+        s - input string
+        returns - tokens, weights
+        '''
+        pass
 
     @abstractmethod
-    def explain_instances(self,S:typing.List[str])->typing.Any:
-      '''
-      S - list of strings
-      returns - tokens, weights
-      '''
-      pass
+    def explain_instances(self, S: typing.List[str]) -> typing.Any:
+        '''
+        S - list of strings
+        returns - tokens, weights
+        '''
+        pass
+
 
 class LimeExplainer(Explainer):
 
-  def __init__(self,model,num_samples=1000):
-    '''
-    predict_proba - predict function which will depend on model type
-    '''
-    
-    labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
-    self.exp = LimeTextExplainer(class_names=labels)
-    self.tokenizer=model.tokenizer
-    self.predict_proba = lambda s: model.predict_proba_batch(s)
-    self.num_samples = num_samples
+    def __init__(self, model):
+        '''
+        predict_proba - predict function which will depend on model type
+        '''
 
+        labels = Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
+        self.exp = LimeTextExplainer(class_names=labels)
+        self.tokenizer = model.tokenizer
+        self.predict_proba = lambda s: model.predict_proba_batch(s)
+        self.model = model
 
-  def explain_instance(self,x):
-    '''
-    x - 1 input instance
-    
-    returns - lists of tokens/importance weights
-    sorted by the latter
-    '''
+    def explain_instance(self, x):
+        '''
+        x - 1 input instance
 
-    def predict_probs(x):
-        if isinstance(x,str):
-            x=[x]
+        returns - lists of tokens/importance weights
+        sorted by the latter
+        '''
 
-        values=np.array(self.predict_proba(x))
+        def predict_probs(x):
+            if isinstance(x, str):
+                x = [x]
 
-        values=np.nan_to_num(values)
+            values = self.predict_proba(x)
 
-        return values
-    
+            # print(x)
+            # print(values)
 
-    exp_instance=self.exp.explain_instance(x, predict_probs, num_features=100,top_labels=10,num_samples=self.num_samples)
+            return values
 
+        exp_instance = self.exp.explain_instance(
+            x, predict_probs, num_features=100, top_labels=10, num_samples=750)
 
-    #exp_instance.show_in_notebook(text=True)
-    #plt.show()
+        # exp_instance.show_in_notebook(text=True)
+        # plt.show()
 
-    pred_label = np.argmax(exp_instance.predict_proba)
+        pred_label = np.argmax(exp_instance.predict_proba)
 
-    indices=[x[0] for x in exp_instance.as_map()[pred_label]]
-    values = [x[1] for x in exp_instance.as_map()[pred_label]]
+        indices = [x[0] for x in exp_instance.as_map()[pred_label]]
+        values = [x[1] for x in exp_instance.as_map()[pred_label]]
 
-    tokens=[x[0] for x in exp_instance.as_list(label=pred_label)]
+        tokens = [x[0] for x in exp_instance.as_list(label=pred_label)]
 
-    #sort by weights for convenience
+        # sort by weights for convenience
 
-    zipped_lists = zip(values,indices,tokens)
-    sorted_tuples = sorted(zipped_lists,reverse=True)
+        zipped_lists = zip(values, indices, tokens)
+        sorted_tuples = sorted(zipped_lists, reverse=True)
 
-    tuples = zip(*sorted_tuples)
-    values,indices,tokens = [ list(tuple) for tuple in  tuples]
-    
-    return values,pred_label,indices,tokens
+        tuples = zip(*sorted_tuples)
+        values, indices, tokens = [list(tuple) for tuple in tuples]
 
-  @overrides
-  def explain_instances(self,X):
-    '''
-    X - array of input sentences
-    '''
+        return values, pred_label, indices, tokens
 
-    indices_list=[]
-    values_list = []
-    pred_list = []
-    tokens_list = []
+    @overrides
+    def explain_instances(self, X):
+        '''
+        X - array of input sentences
+        '''
 
-    for s in X:
-        try:
-            
-            values,pred,indices,tokens = self.explain_instance(s)
-        
-        except:
-            indices,values, pred,tokens = ['N/A'],['N/A'],['N/A'],['N/A']
-        
-        values_list.append(values)
-        pred_list.append(pred)
-        tokens_list.append(tokens)
-        indices_list.append(indices)
+        indices_list = []
+        values_list = []
+        pred_list = []
+        tokens_list = []
 
-    return values_list,pred_list,tokens_list,indices_list
+        for s in X:
+            try:
+
+                values, pred, indices, tokens = self.explain_instance(s)
+
+            except:
+                indices, values, pred, tokens = [
+                    'N/A'], ['N/A'], ['N/A'], ['N/A']
+
+            values_list.append(values)
+            pred_list.append(pred)
+            tokens_list.append(tokens)
+            indices_list.append(indices)
+
+        return values_list, pred_list, tokens_list, indices_list
+
 
 class SHAPExplainer(Explainer):
 
-  def __init__(self, model):
-    '''
-    Currently works only with BERT
-    '''
-    labels=Explainer.DATASET_LABELS[model.dataset_finetune.NAME]
-    self.tokenizer=model.tokenizer
-    self.predict_proba = lambda s: model.predict_proba_batch(s)
-    self.exp = shap.Explainer(self.predict_proba,self.tokenizer,output_names=labels)
+    def __init__(self, model):
+        '''
+        Currently works only with BERT
+        '''
+        label2id = model.model.config.label2id
+        labels = sorted(label2id, key=label2id.get)
 
-  @overrides
-  def explain_instances(self,X):
-    '''
-    X - array of input sentences
-    '''
+        self.tokenizer = model.tokenizer
+        self.predict_proba = lambda s: model.predict_proba_batch(s)
+        self.exp = shap.Explainer(
+            self.predict_proba, self.tokenizer, output_names=labels)
+        self.model = model
 
-    shap_values = self.exp(X)
+    @overrides
+    def explain_instances(self, X):
+        '''
+        X - array of input sentences
+        '''
 
-    tokens,values=shap_values.data,shap_values.values
+        shap_values = self.exp(X)
 
-    return tokens,values
+        return shap_values
 
-  @overrides
-  def explain_instance(self,x):
-    '''
-    shap explainer can process lists by default
-    '''
-    pass
+    @overrides
+    def explain_instance(self, x):
+        '''
+        shap explainer can process lists by default
+        '''
+        pass
+
 
 class AllenNLPExplainer(Explainer):
 
-  def __init__(self,model):
+    def __init__(self, model):
 
-    self.model=model
-    # self.tokenizer=tokenizer
-    # self.device=device
-    self.predictor=model.predictor
-    self.exp = SimpleGradient(self.predictor)
-    
-  def explain_instance(self,x):
-    '''
-    x - 1 input instance
-    
-    returns - list of top tokens/importance weights
-    '''
+        self.model = model
+        # self.tokenizer = tokenizer
+        # self.device = device
+        self.predictor = model.predictor
+        self.exp = SimpleGradient(self.predictor)
 
-    explanation = self.exp.saliency_interpret_from_json({"sentence":x})
-    grad = explanation['instance_1']['grad_input_1']
-    label = self.predictor.predict(x)['label']
+    def explain_instance(self, x):
+        '''
+        x - 1 input instance
 
-    return grad, label
+        returns - list of top tokens/importance weights
+        '''
 
-  @overrides
-  def explain_instances(self,X):
-    '''
-    X - array of input sentences
-    '''
-    grad_list = []
-    label_list = []
+        explanation = self.exp.saliency_interpret_from_json({"sentence": x})
+        grad = explanation['instance_1']['grad_input_1']
+        label = self.predictor.predict(x)['label']
 
-    for s in X:
+        return grad, label
 
-      grad, label = self.explain_instance(s)
+    @overrides
+    def explain_instances(self, X):
+        '''
+        X - array of input sentences
+        '''
+        grad_list = []
+        label_list = []
 
-      grad_list.append(grad)
-      label_list.append(label)
+        for s in X:
 
-    return grad_list, label_list
+            grad, label = self.explain_instance(s)
 
+            grad_list.append(grad)
+            label_list.append(label)
+
+        return grad_list, label_list
