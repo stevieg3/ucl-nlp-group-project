@@ -232,7 +232,7 @@ def make_predictions(
 
     logit_list = []
 
-    for batch in tqdm(input_data_loader):
+    for batch in input_data_loader:
 
         batch_input_ids = batch[0].to(device)
         batch_attention_mask = batch[1].to(device)
