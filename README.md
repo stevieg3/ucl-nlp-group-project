@@ -6,9 +6,9 @@ This repository contains the code for the COMP0087 group project "On the Robustn
 
 * src/ - code imported into the notebooks
 * notebooks/ - contains jupyter notebooks of various sorts all related to the project
-    * notebooks/fine-tune-models/ - code to fine-tune bert models for sst and ag news datasets
-    * notebooks/code-demo/ - examples of using the code in the notebooks
-    * notebooks/experiments/ - notebooks used for running experiments
+     * notebooks/fine-tune-models/ - code to fine-tune bert models for sst and ag news datasets
+     * notebooks/code-demo/ - examples of using the code in the notebooks
+     * notebooks/experiments/ - notebooks used for running experiments
 * models/ - fine-tuned models (not present in the repo, see how to set up)
 * scripts/ - helper scripts
 
@@ -26,10 +26,10 @@ pip install -r requirements.txt
 
 Download and unzip the fine-tuned models into `models/` directory. The links are given as:
 
-* [bcn-agnews_output.zip](https://liveuclac-my.sharepoint.com/:u:/r/personal/ucabkro_ucl_ac_uk/Documents/ucl-snlp64-group-project/bcn-agnews_output.zip?csf=1&web=1&e=nCMwss)
-* [bcn-sst_output.zip](https://liveuclac-my.sharepoint.com/:u:/r/personal/ucabkro_ucl_ac_uk/Documents/ucl-snlp64-group-project/bcn-sst_output.zip?csf=1&web=1&e=a1oPNf)
-* [bert-agnews.zip](https://liveuclac-my.sharepoint.com/:u:/r/personal/ucabkro_ucl_ac_uk/Documents/ucl-snlp64-group-project/fine-tuned-bert-base-agnews.zip?csf=1&web=1&e=MaBYWA)
-* [bert-sst.zip](https://liveuclac-my.sharepoint.com/:u:/r/personal/ucabkro_ucl_ac_uk/Documents/ucl-snlp64-group-project/fine-tuned-bert-base-sst.zip?csf=1&web=1&e=tK1KAB)
+* [bcn-agnews_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/ESZ14c-PS39BuIt7YXqnrL4Br368_v8cjo6X7GMPt-9N3A?e=TYs9A1)
+* [bcn-sst_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/EbhqABBIa5BHsLBE-LuUYzcBykHKxAwMJofFVyZiLrZoHQ?e=Vq8l4x)
+* [bert-agnews.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/Ea6aDI5-1xFEje2Olvj7KmQBq6FLglaW_2Eoez7vB82_Ow?e=Myuhk0)
+* [bert-sst.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/EZlG-PDyYbpEgb1Xyg_tiTUBUrIvPYrvh25mnr2R1r689g?e=b1PqPf)
 
 ## Datasets
 
