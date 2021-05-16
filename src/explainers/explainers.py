@@ -64,7 +64,8 @@ class LimeExplainer(Explainer):
             if isinstance(x, str):
                 x = [x]
 
-            values = self.predict_proba(x)
+        values=np.array(self.predict_proba(x))
+        values=np.nan_to_num(values)
 
             # print(x)
             # print(values)
