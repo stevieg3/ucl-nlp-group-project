@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 ## Models
 
-Download and unzip the fine-tuned models into `models/` directory. The links are given as:
+Download and unzip the fine-tuned models into `models/` directory. The links are given below:
 
 * [bcn-agnews_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/ESZ14c-PS39BuIt7YXqnrL4Br368_v8cjo6X7GMPt-9N3A?e=TYs9A1)
 * [bcn-sst_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/EbhqABBIa5BHsLBE-LuUYzcBykHKxAwMJofFVyZiLrZoHQ?e=Vq8l4x)
