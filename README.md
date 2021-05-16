@@ -1,61 +1,36 @@
-ucl-nlp-group-project
-==============================
+# About
 
-Repository for UCL Statistical Natural Language Processing (COMP0087) group coursework. Researching the interaction between adversarial attacks and explainability techniques in the context of NLP.
- 
+This repository contains the code for the COMP0087 group project "On the Robustness of Natural Language Explainers".
 
-Environment Set-up
-------------
+# Structure
 
-`conda create -n nlp-group-project python=3.7 -y`
+* src/ - code imported into the notebooks
+* notebooks/ - contains jupyter notebooks of various sorts all related to the project
+     * notebooks/fine-tune-models/ - code to fine-tune bert models for sst and ag news datasets
+     * notebooks/code-demo/ - examples of using the code in the notebooks
+     * notebooks/experiments/ - notebooks used for running experiments
+* models/ - fine-tuned models (not present in the repo, see how to set up)
+* scripts/ - helper scripts
 
-`conda activate nlp-group-project`
+# Setup
 
-`pip install -r requirements.txt`
+## Environment
 
+```python
+conda create -n snlp64-group-project python=3.7 -y
+conda activate snlp64-group-project
+pip install -r requirements.txt
+```
 
-Datasets
-------------
-- Stanford Sentiment Treebank (https://pypi.org/project/pytreebank/)
+## Models
 
+Download and unzip the fine-tuned models into `models/` directory. The links are given as:
 
-Project Organization
-------------
+* [bcn-agnews_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/ESZ14c-PS39BuIt7YXqnrL4Br368_v8cjo6X7GMPt-9N3A?e=TYs9A1)
+* [bcn-sst_output.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/EbhqABBIa5BHsLBE-LuUYzcBykHKxAwMJofFVyZiLrZoHQ?e=Vq8l4x)
+* [bert-agnews.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/Ea6aDI5-1xFEje2Olvj7KmQBq6FLglaW_2Eoez7vB82_Ow?e=Myuhk0)
+* [bert-sst.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabkro_ucl_ac_uk/EZlG-PDyYbpEgb1Xyg_tiTUBUrIvPYrvh25mnr2R1r689g?e=b1PqPf)
 
-    ├── LICENSE    
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.    
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │    
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data  
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling    
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │                     predictions        
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations    
+## Datasets
 
---------
-
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+All of the datasets are cached on the running system by the [pytreebank](https://github.com/JonathanRaiman/pytreebank) and [huggingface datasets](https://github.com/huggingface/datasets) libraries.

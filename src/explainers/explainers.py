@@ -5,7 +5,6 @@ import shap
 import torch
 from lime.lime_text import LimeTextExplainer
 from allennlp.interpret.saliency_interpreters import SimpleGradient
-from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 import numpy as np
 from src.data.dataload import *
 import matplotlib
@@ -14,8 +13,8 @@ import matplotlib.pyplot as plt
 
 class Explainer:
     DATASET_LABELS = {
-        DatasetSST.NAME: ['3', '1', '2', '4', '0'],  # TODO Clarify why this order
-        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],  # TODO Clarify why this order
+        DatasetSST.NAME: ['3', '1', '2', '4', '0'],
+        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],
     }
 
     def __init__(self):
@@ -66,18 +65,11 @@ class LimeExplainer(Explainer):
 
             values=np.array(self.predict_proba(x))
             values=np.nan_to_num(values)
-
-            # print(x)
-            # print(values)
-
             return values
 
         exp_instance = self.exp.explain_instance(
             x, predict_probs, num_features=100,
             top_labels=10, num_samples=self.num_samples)
-
-        # exp_instance.show_in_notebook(text=True)
-        # plt.show()
 
         pred_label = np.argmax(exp_instance.predict_proba)
 
@@ -85,8 +77,6 @@ class LimeExplainer(Explainer):
         values = [x[1] for x in exp_instance.as_map()[pred_label]]
 
         tokens = [x[0] for x in exp_instance.as_list(label=pred_label)]
-
-        # sort by weights for convenience
 
         zipped_lists = zip(values, indices, tokens)
         sorted_tuples = sorted(zipped_lists, reverse=True)
@@ -109,9 +99,7 @@ class LimeExplainer(Explainer):
 
         for s in X:
             try:
-
                 values, pred, indices, tokens = self.explain_instance(s)
-
             except:
                 indices, values, pred, tokens = [
                     'N/A'], ['N/A'], ['N/A'], ['N/A']
@@ -128,7 +116,7 @@ class SHAPExplainer(Explainer):
 
     def __init__(self, model):
         '''
-        Currently works only with BERT
+        Only with BERT
         '''
         label2id = model.model.config.label2id
         labels = sorted(label2id, key=label2id.get)
@@ -160,10 +148,9 @@ class SHAPExplainer(Explainer):
 class AllenNLPExplainer(Explainer):
 
     def __init__(self, model):
-
         self.model = model
-        # self.tokenizer = tokenizer
-        # self.device = device
+        self.tokenizer = model.tokenizer
+        self.device = model.device
         self.predictor = model.predictor
         self.exp = SimpleGradient(self.predictor)
 

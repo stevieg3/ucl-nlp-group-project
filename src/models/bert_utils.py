@@ -17,6 +17,7 @@ from transformers import \
 from transformers.trainer_utils import \
     set_seed
 from tqdm import tqdm
+import typing
 
 
 RANDOM_SEED = 3
@@ -40,7 +41,7 @@ def _pad_sentence_at_end(sentence: list, max_length: int) -> np.array:
     return np.array(padded_sentence)
 
 
-def _create_sentence_input_arrays(list_encoded_sentences: list, max_length: int) -> (np.array, np.array):
+def _create_sentence_input_arrays(list_encoded_sentences: list, max_length: int) -> typing.Tuple[np.array, np.array]:
     """
     Create input arrays for BERT
 
@@ -196,7 +197,7 @@ def make_predictions(
     tokenizer: BertTokenizer,
     device: torch.device,
     hyperparameter_dict: dict
-) -> (np.array, np.array):
+) -> typing.Tuple[np.array, np.array]:
     """
     Make predictions on DataFrame containing sentences with given model
 
