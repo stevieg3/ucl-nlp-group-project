@@ -78,6 +78,7 @@ class BCNModel(Model):
         if device is None:
             device = device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.device = device
+        self.tokenizer = allennlp.data.tokenizers.spacy_tokenizer.SpacyTokenizer()
         self.model = None
         self.vocab = None
         self.predictor = None

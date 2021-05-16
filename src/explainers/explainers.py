@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 
 class Explainer:
     DATASET_LABELS = {
-        DatasetSST.NAME: ['3', '1', '2', '4', '0'],  # TODO Clarify why this order
-        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],  # TODO Clarify why this order
+        DatasetSST.NAME: ['3', '1', '2', '4', '0'],
+        DatasetAGNews.NAME: ['Sports', 'Sci/Tech', 'Business', 'World'],
     }
 
     def __init__(self):
