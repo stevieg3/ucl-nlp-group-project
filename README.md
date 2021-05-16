@@ -1,3 +1,17 @@
+# About
+
+This repository contains the code for the COMP0087 group project "On the Robustness of Natural Language Explainers".
+
+# Structure
+
+* src/ - code imported into the notebooks
+* notebooks/ - contains jupyter notebooks of various sorts all related to the project
+    * notebooks/fine-tune-models/ - code to fine-tune bert models for sst and ag news datasets
+    * notebooks/code-demo/ - examples of using the code in the notebooks
+    * notebooks/experiments/ - notebooks used for running experiments
+* models/ - fine-tuned models (not present in the repo, see how to set up)
+* scripts/ - helper scripts
+
 # Setup
 
 ## Environment
@@ -20,4 +34,3 @@ Download and unzip the models into `models/` directory. The links are given as:
 ## Datasets
 
 All of the datasets are cached on the running system by the [pytreebank](https://github.com/JonathanRaiman/pytreebank) and [huggingface datasets](https://github.com/huggingface/datasets) libraries.
-
