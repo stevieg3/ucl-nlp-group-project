@@ -40,7 +40,7 @@ class Explainer:
 
 class LimeExplainer(Explainer):
 
-    def __init__(self, model):
+    def __init__(self, model, num_samples=1000):
         '''
         predict_proba - predict function which will depend on model type
         '''
@@ -50,6 +50,7 @@ class LimeExplainer(Explainer):
         self.tokenizer = model.tokenizer
         self.predict_proba = lambda s: model.predict_proba_batch(s)
         self.model = model
+        self.num_samples = num_samples
 
     def explain_instance(self, x):
         '''
@@ -71,7 +72,8 @@ class LimeExplainer(Explainer):
             return values
 
         exp_instance = self.exp.explain_instance(
-            x, predict_probs, num_features=100, top_labels=10, num_samples=750)
+            x, predict_probs, num_features=100,
+            top_labels=10, num_samples=self.num_samples)
 
         # exp_instance.show_in_notebook(text=True)
         # plt.show()
